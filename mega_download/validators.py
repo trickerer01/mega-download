@@ -12,15 +12,15 @@ from ipaddress import IPv4Address
 
 from aiohttp import ClientTimeout
 
-from defs import (
+from .defs import (
     CONNECT_TIMEOUT_BASE,
     CONNECT_TIMEOUT_SOCKET_READ,
     LOGGING_FLAGS,
     SLASH,
     NumRange,
 )
-from logger import Log
-from util.filesystem import normalize_path
+from .logger import Log
+from .util.filesystem import normalize_path
 
 
 def valid_kwarg(kwarg: str) -> tuple[str, str]:

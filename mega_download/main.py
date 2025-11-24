@@ -10,12 +10,12 @@ import sys
 from asyncio import get_running_loop, run, sleep
 from collections.abc import Sequence
 
-from api import DownloadMode, FileSizeFilter, Mega, MegaNZError, MegaOptions
-from cmdargs import HelpPrintExitException, prepare_arglist
-from config import Config
-from defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR
-from logger import Log
-from version import APP_NAME, APP_VERSION
+from .api import DownloadMode, FileSizeFilter, Mega, MegaNZError, MegaOptions
+from .cmdargs import HelpPrintExitException, prepare_arglist
+from .config import Config
+from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR
+from .logger import Log
+from .version import APP_NAME, APP_VERSION
 
 __all__ = ('main_async', 'main_sync')
 

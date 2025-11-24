@@ -9,8 +9,8 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 from collections.abc import Iterable
 from typing import Protocol
 
-from api.containers import File
-from api.defs import Mem, NumRange
+from .containers import File
+from .defs import Mem, NumRange
 
 __all__ = ('FileSizeFilter', 'Filter', 'any_filter_matching')
 

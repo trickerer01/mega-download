@@ -12,9 +12,9 @@ from typing import NamedTuple
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 
-from api.defs import CHUNK_BLOCK_LEN, DOWNLOAD_CHUNK_SIZE_INIT, DOWNLOAD_CHUNK_SIZE_MAX, EMPTY_IV
-from api.encryption import pack_sequence, pad_bytes_end, unpack_sequence
-from api.logging import Log
+from .defs import CHUNK_BLOCK_LEN, DOWNLOAD_CHUNK_SIZE_INIT, DOWNLOAD_CHUNK_SIZE_MAX, EMPTY_IV
+from .encryption import pack_sequence, pad_bytes_end, unpack_sequence
+from .logging import Log
 
 __all__ = ('make_chunk_decryptor', 'make_chunk_generator')
 

@@ -18,8 +18,11 @@ from aiofile import async_open
 from aiohttp import ClientConnectorError, ClientResponse, ClientResponseError, ClientSession, ClientTimeout, TCPConnector
 from aiohttp_socks import ProxyConnector
 
-from api.chunkgen import make_chunk_decryptor, make_chunk_generator
-from api.containers import (
+from mega_download.util.strings import ensure_scheme_https
+from mega_download.util.useragent import UAManager
+
+from .chunkgen import make_chunk_decryptor, make_chunk_generator
+from .containers import (
     DownloadParams,
     File,
     Folder,
@@ -29,8 +32,8 @@ from api.containers import (
     SharedkeysDict,
     UserInfo,
 )
-from api.defs import CONNECT_RETRY_DELAY, MAX_QUEUE_SIZE, SITE_API, UINT32_MAX, DownloadMode, Mem
-from api.encryption import (
+from .defs import CONNECT_RETRY_DELAY, MAX_QUEUE_SIZE, SITE_API, UINT32_MAX, DownloadMode, Mem
+from .encryption import (
     base64_to_ints,
     base64_url_decode,
     base64_url_encode,
@@ -43,12 +46,10 @@ from api.encryption import (
     unpack_sequence,
     urand,
 )
-from api.exceptions import LoginError, MegaErrorCodes, RequestError, ValidationError
-from api.filters import Filter, any_filter_matching
-from api.logging import Log, set_logger
-from api.options import MegaOptions
-from util.strings import ensure_scheme_https
-from util.useragent import UAManager
+from .exceptions import LoginError, MegaErrorCodes, RequestError, ValidationError
+from .filters import Filter, any_filter_matching
+from .logging import Log, set_logger
+from .options import MegaOptions
 
 __all__ = ('Mega',)
 
@@ -342,7 +343,7 @@ class Mega:
 
         proc_queue: set[pathlib.PurePosixPath] = self._filter_folder_contents(fs)
         self._queue_size = len({_ for _ in proc_queue if fs[_]['t'] == NodeType.FILE})
-        Log.info(f'Downloading {self._queue_size:d} / {file_count:d} files...')
+        Log.info(f'Saving {self._queue_size:d} / {file_count:d} files...')
 
         tasks = []
         idx = 0
@@ -424,7 +425,7 @@ class Mega:
 
         touch_msg = ' <touch>' if touch else ''
         size_msg = '0.0 / ' if touch else ''
-        Log.info(f'Downloading{touch_msg} {output_path.name} => {output_path} ({size_msg}{file_size / Mem.MB:.2f} MB)...')
+        Log.info(f'Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{file_size / Mem.MB:.2f} MB)...')
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         chunk_generator = make_chunk_generator(file_size)

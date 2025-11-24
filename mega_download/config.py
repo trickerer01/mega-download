@@ -6,7 +6,6 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 #
 
-
 if False is True:  # for hinting only
     from aiohttp import ClientTimeout  # noqa: I001
     from defs import NumRange

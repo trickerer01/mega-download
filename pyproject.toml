@@ -1,5 +1,5 @@
 [build-system]
-requires= ['setuptools', 'setuptools-scm']
+requires= ['setuptools']
 build-backend = 'setuptools.build_meta'
 
 [project]
@@ -18,7 +18,7 @@ keywords = [
     'downloader',
 ]
 readme = 'README.md'
-license = {file = 'LICENSE'}
+license-files = ['LICENSE']
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Environment :: Console',
@@ -55,8 +55,7 @@ Documentation = 'https://github.com/trickerer01/mega-download#readme'
 Tracker = 'https://github.com/trickerer01/mega-download/issues'
 
 [project.scripts]
-main_sync = 'main:main_sync'
-main_async = 'main:main_async'
+main_sync = 'mega_download:main'
 
 [tool.ruff]
 line-length = 140
@@ -136,6 +135,9 @@ select = [
     'PLW',    # Pylint Warning
     'RUF',    # Ruff-specific rules
 ]
+
+[tool.setuptools]
+py-modules = ['mega_download', 'tests']
 
 [tool.ruff.lint.per-file-ignores]
 'src/main.py' = [

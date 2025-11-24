@@ -10,8 +10,8 @@ import functools
 from collections.abc import Callable
 from unittest import TestCase
 
-from config import Config
-from logger import Log
+from mega_download.config import Config
+from mega_download.logger import Log
 
 RUN_CONN_TESTS = 0
 

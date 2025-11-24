@@ -10,9 +10,9 @@ import os
 from argparse import ZERO_OR_MORE, ArgumentParser, Namespace
 from collections.abc import Sequence
 
-from api.defs import DOWNLOAD_MODE_DEFAULT, DOWNLOAD_MODES
-from config import Config
-from defs import (
+from .api.defs import DOWNLOAD_MODE_DEFAULT, DOWNLOAD_MODES
+from .config import Config
+from .defs import (
     ACTION_APPEND,
     ACTION_STORE_TRUE,
     CONNECT_RETRIES_BASE,
@@ -31,8 +31,8 @@ from defs import (
     LOGGING_FLAGS_DEFAULT,
     UTF8,
 )
-from logger import Log
-from validators import (
+from .logger import Log
+from .validators import (
     log_level,
     positive_int,
     valid_kwarg,
@@ -41,7 +41,7 @@ from validators import (
     valid_range,
     valid_timeout,
 )
-from version import APP_NAME, APP_VERSION
+from .version import APP_NAME, APP_VERSION
 
 __all__ = ('HelpPrintExitException', 'prepare_arglist')
 

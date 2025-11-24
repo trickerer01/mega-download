@@ -15,8 +15,8 @@ from collections.abc import Sequence
 
 from Crypto.Cipher import AES
 
-from api.containers import Attributes
-from api.defs import EMPTY_IV, LATIN1, UINT32_MAX, UTF8
+from .containers import Attributes
+from .defs import EMPTY_IV, LATIN1, UINT32_MAX, UTF8
 
 __all__ = (
     'base64_to_ints',

@@ -10,9 +10,9 @@ from typing import TypedDict
 
 from aiohttp import ClientTimeout
 
-from api.defs import DownloadMode
-from api.filters import Filter
-from api.logging import Logger
+from .defs import DownloadMode
+from .filters import Filter
+from .logging import Logger
 
 
 class MegaOptions(TypedDict):
