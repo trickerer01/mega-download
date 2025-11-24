@@ -16,42 +16,25 @@ from defs import (
     ACTION_APPEND,
     ACTION_STORE_TRUE,
     CONNECT_RETRIES_BASE,
-    HELP_ARG_CMDFILE,
-    HELP_ARG_CONTINUE,
     HELP_ARG_COOKIE,
     HELP_ARG_DMMODE,
     HELP_ARG_FILTERS,
-    HELP_ARG_FSDEPTH,
-    HELP_ARG_FSLEVELUP,
     HELP_ARG_HEADER,
     HELP_ARG_LINKS,
     HELP_ARG_LOGGING,
-    HELP_ARG_NAMING,
     HELP_ARG_NOCOLORS,
-    HELP_ARG_NOMOVE,
     HELP_ARG_PATH,
     HELP_ARG_PROXY,
-    HELP_ARG_PROXYNODOWN,
-    HELP_ARG_PROXYNOHTML,
-    HELP_ARG_REPORT_DUPLICATES,
     HELP_ARG_RETRIES,
-    HELP_ARG_STORE_CONTINUE_CMDFILE,
     HELP_ARG_TIMEOUT,
-    HELP_ARG_UNFINISH,
     HELP_ARG_VERSION,
     LOGGING_FLAGS_DEFAULT,
-    MAX_DEST_SCAN_SUB_DEPTH_DEFAULT,
-    MAX_DEST_SCAN_UPLEVELS_DEFAULT,
-    NAMING_FLAGS_DEFAULT,
     UTF8,
 )
 from logger import Log
 from validators import (
     log_level,
-    naming_flags,
     positive_int,
-    positive_nonzero_int,
-    valid_filepath_abs,
     valid_kwarg,
     valid_path,
     valid_proxy,
@@ -64,14 +47,8 @@ __all__ = ('HelpPrintExitException', 'prepare_arglist')
 
 DM_DEFAULT = DOWNLOAD_MODE_DEFAULT
 """'full'"""
-NAMING_DEFAULT = NAMING_FLAGS_DEFAULT
-'''0x1E'''
 LOGGING_DEFAULT = LOGGING_FLAGS_DEFAULT
 '''0x004'''
-FSDEPTH_DEFAULT = MAX_DEST_SCAN_SUB_DEPTH_DEFAULT
-'''1'''
-FSUP_DEFAULT = MAX_DEST_SCAN_UPLEVELS_DEFAULT
-'''0'''
 
 PARSER_ARG_TITLE = 'zzzparser_type'
 PARSER_TITLE_FILE = 'file'
@@ -81,8 +58,6 @@ EXISTING_PARSERS = {PARSER_TITLE_CMD, PARSER_TITLE_FILE}
 
 PARSED_ARGS_NO_CONSUME = {
     PARSER_ARG_TITLE,
-    'pages',
-    'count',
 }
 
 
@@ -151,35 +126,19 @@ def create_parsers() -> tuple[ArgumentParser, ArgumentParser, ArgumentParser]:
 
 
 def parse_arglist(args: Sequence[str]) -> Namespace:
-    parser, par_file, par_cmd = create_parsers()
+    parser, _, par_cmd = create_parsers()
     par_cmd.usage = (
         '\n       main.py [options...] URL [URL ...]'
     )
 
-    if True is False:
-        par_file.add_argument('-path', metavar='#filepath', required=True, help=HELP_ARG_CMDFILE, type=valid_filepath_abs)
     par_cmd.add_argument('-o', '--path', default=valid_path(os.path.abspath(os.path.curdir)), help=HELP_ARG_PATH, type=valid_path)
-    if True is False:
-        par_cmd.add_argument('-fsdepth', metavar='#number', default=FSDEPTH_DEFAULT, help=HELP_ARG_FSDEPTH, type=positive_int)
-        par_cmd.add_argument('-fslevelup', metavar='#number', default=FSUP_DEFAULT, help=HELP_ARG_FSLEVELUP, type=positive_nonzero_int)
     par_cmd.add_argument('-x', '--proxy', metavar='#type://[u:p@]a.d.d.r:port', default=None, help=HELP_ARG_PROXY, type=valid_proxy)
-    if True is False:
-        par_cmd.add_argument('-proxynodown', '--download-without-proxy', action=ACTION_STORE_TRUE, help=HELP_ARG_PROXYNODOWN)
-        par_cmd.add_argument('-proxynohtml', '--html-without-proxy', action=ACTION_STORE_TRUE, help=HELP_ARG_PROXYNOHTML)
     par_cmd.add_argument('-t', '--timeout', metavar='#seconds', default=valid_timeout(''), help=HELP_ARG_TIMEOUT, type=valid_timeout)
     par_cmd.add_argument('-r', '--retries', metavar='#number', default=CONNECT_RETRIES_BASE, help=HELP_ARG_RETRIES, type=positive_int)
-    if True is False:
-        par_cmd.add_argument('-continue', '--continue-mode', action=ACTION_STORE_TRUE, help=HELP_ARG_CONTINUE)
-        par_cmd.add_argument('-unfinish', '--keep-unfinished', action=ACTION_STORE_TRUE, help=HELP_ARG_UNFINISH)
-        par_cmd.add_argument('-nomove', '--no-rename-move', action=ACTION_STORE_TRUE, help=HELP_ARG_NOMOVE)
-        par_cmd.add_argument('-naming', default=NAMING_DEFAULT, help=HELP_ARG_NAMING, type=naming_flags)
     par_cmd.add_argument('-v', '--log-level', default=LOGGING_DEFAULT, help=HELP_ARG_LOGGING, type=log_level)
     par_cmd.add_argument('-g', '--disable-log-colors', action=ACTION_STORE_TRUE, help=HELP_ARG_NOCOLORS)
     par_cmd.add_argument('-h', '--header', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_HEADER, type=valid_kwarg)
     par_cmd.add_argument('-c', '--cookie', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_COOKIE, type=valid_kwarg)
-    if True is False:
-        par_cmd.add_argument('--store-continue-cmdfile', action=ACTION_STORE_TRUE, help=HELP_ARG_STORE_CONTINUE_CMDFILE)
-        par_cmd.add_argument('--report-duplicates', action=ACTION_STORE_TRUE, help=HELP_ARG_REPORT_DUPLICATES)
     par_cmd.add_argument('-fs', '--filter-filesize', metavar='#min-max', default=valid_range(''), help=HELP_ARG_FILTERS, type=valid_range)
     par_cmd.add_argument('-d', '--download-mode', default=DM_DEFAULT, help=HELP_ARG_DMMODE, choices=DOWNLOAD_MODES)
     par_cmd.add_argument(dest='links', nargs=ZERO_OR_MORE, help=HELP_ARG_LINKS)

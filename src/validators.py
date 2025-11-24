@@ -12,36 +12,15 @@ from ipaddress import IPv4Address
 
 from aiohttp import ClientTimeout
 
-from config import Config
 from defs import (
     CONNECT_TIMEOUT_BASE,
     CONNECT_TIMEOUT_SOCKET_READ,
     LOGGING_FLAGS,
-    NAMING_FLAGS,
     SLASH,
-    NamingFlags,
     NumRange,
 )
 from logger import Log
 from util.filesystem import normalize_path
-
-
-def _has_naming_flag(flag: int) -> bool:
-    return bool(Config.naming_flags & flag)
-
-
-def find_and_resolve_config_conflicts(full_download=True) -> bool:
-    if Config.proxy and Config.download_without_proxy and Config.html_without_proxy:
-        Log.fatal('\nError: proxy exists but is disabled for both html and download requests!')
-        raise ValueError
-    delay_for_message = False
-
-    if full_download is False:
-        if (Config.naming_flags & NamingFlags.ALL_DEFAULT) != NamingFlags.ALL_DEFAULT:
-            if _has_naming_flag(NamingFlags.ALL_DEFAULT & ~(NamingFlags.PREFIX | NamingFlags.TITLE)):
-                Log.info('Info: can only use prefix and title naming flags for previews, other flags will be ignored!')
-                delay_for_message = True
-    return delay_for_message
 
 
 def valid_kwarg(kwarg: str) -> tuple[str, str]:
@@ -84,15 +63,6 @@ def valid_path(pathstr: str) -> str:
         raise ArgumentError
 
 
-def valid_filepath_abs(pathstr: str) -> str:
-    try:
-        newpath = normalize_path(os.path.expanduser(pathstr.strip('\'"')), False)
-        assert os.path.isfile(newpath) and os.path.isabs(newpath)
-        return newpath
-    except Exception:
-        raise ArgumentError
-
-
 def valid_proxy(prox: str) -> str:
     from ctypes import c_uint16, sizeof
     try:
@@ -130,18 +100,6 @@ def valid_proxy(prox: str) -> str:
             Log.error(f'Invalid proxy port value \'{pp}\'!')
             raise
         return f'{pt}://{pup}{pva!s}:{ppi:d}'
-    except Exception:
-        raise ArgumentError
-
-
-def naming_flags(flags: str) -> int:
-    try:
-        if flags[0].isnumeric():
-            intflags = int(flags, base=16 if flags.startswith('0x') else 10)
-            assert intflags & ~NamingFlags.ALL == 0
-        else:
-            intflags = sum(int(NAMING_FLAGS[fname], base=16) for fname in flags.split('|'))
-        return intflags
     except Exception:
         raise ArgumentError
 

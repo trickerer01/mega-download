@@ -15,7 +15,6 @@ from cmdargs import HelpPrintExitException, prepare_arglist
 from config import Config
 from defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR
 from logger import Log
-from validators import find_and_resolve_config_conflicts
 from version import APP_NAME, APP_VERSION
 
 __all__ = ('main_async', 'main_sync')
@@ -52,9 +51,6 @@ async def main(args: Sequence[str]) -> int:
         prepare_arglist(args)
     except HelpPrintExitException:
         return 0
-
-    if find_and_resolve_config_conflicts(True) is True:
-        await sleep(3.0)
 
     try:
         async with Mega(make_mega_options()) as mega:
