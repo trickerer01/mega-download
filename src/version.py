@@ -1,0 +1,17 @@
+# coding=UTF-8
+"""
+Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
+"""
+#########################################
+#
+#
+
+APP_NAME = 'mega-download'
+APP_VER_MAJOR = '0'
+APP_VER_SUB = '4'
+APP_REVISION = '29'
+APP_VERSION = f'{APP_VER_MAJOR}.{APP_VER_SUB}.{APP_REVISION}'
+
+#
+#
+#########################################

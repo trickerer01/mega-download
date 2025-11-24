@@ -1,0 +1,177 @@
+# coding=UTF-8
+"""
+Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
+"""
+#########################################
+#
+#
+
+import os
+from argparse import ArgumentError
+from ipaddress import IPv4Address
+
+from aiohttp import ClientTimeout
+
+from config import Config
+from defs import (
+    CONNECT_TIMEOUT_BASE,
+    CONNECT_TIMEOUT_SOCKET_READ,
+    LOGGING_FLAGS,
+    NAMING_FLAGS,
+    SLASH,
+    NamingFlags,
+    NumRange,
+)
+from logger import Log
+from util.filesystem import normalize_path
+
+
+def _has_naming_flag(flag: int) -> bool:
+    return bool(Config.naming_flags & flag)
+
+
+def find_and_resolve_config_conflicts(full_download=True) -> bool:
+    if Config.proxy and Config.download_without_proxy and Config.html_without_proxy:
+        Log.fatal('\nError: proxy exists but is disabled for both html and download requests!')
+        raise ValueError
+    delay_for_message = False
+
+    if full_download is False:
+        if (Config.naming_flags & NamingFlags.ALL_DEFAULT) != NamingFlags.ALL_DEFAULT:
+            if _has_naming_flag(NamingFlags.ALL_DEFAULT & ~(NamingFlags.PREFIX | NamingFlags.TITLE)):
+                Log.info('Info: can only use prefix and title naming flags for previews, other flags will be ignored!')
+                delay_for_message = True
+    return delay_for_message
+
+
+def valid_kwarg(kwarg: str) -> tuple[str, str]:
+    try:
+        k, v = tuple(kwarg.split('=', 1))
+        return k, v
+    except Exception:
+        raise ArgumentError
+
+
+def valid_number(val: str, *, lb: int | float | None = None, ub: int | float | None = None, nonzero=False, rfloat=False) -> int | float:
+    try:
+        val = float(val) if rfloat else int(val)
+        assert lb is None or val >= lb
+        assert ub is None or val <= ub
+        assert nonzero is False or val != 0
+        return val
+    except Exception:
+        raise ArgumentError
+
+
+def positive_int(val: str) -> int:
+    return valid_number(val, lb=0)
+
+
+def nonzero_int(val: str) -> int:
+    return valid_number(val, nonzero=True)
+
+
+def positive_nonzero_int(val: str) -> int:
+    return valid_number(val, lb=1)
+
+
+def valid_path(pathstr: str) -> str:
+    try:
+        newpath = normalize_path(os.path.expanduser(pathstr.strip('\'"')))
+        assert os.path.isdir(newpath[:(newpath.find(SLASH) + 1)])
+        return newpath
+    except Exception:
+        raise ArgumentError
+
+
+def valid_filepath_abs(pathstr: str) -> str:
+    try:
+        newpath = normalize_path(os.path.expanduser(pathstr.strip('\'"')), False)
+        assert os.path.isfile(newpath) and os.path.isabs(newpath)
+        return newpath
+    except Exception:
+        raise ArgumentError
+
+
+def valid_proxy(prox: str) -> str:
+    from ctypes import c_uint16, sizeof
+    try:
+        if not prox:
+            return prox
+        try:
+            pt, pv = tuple(prox.split('://', 1))
+        except ValueError:
+            Log.error('Failed to split proxy type and value/port!')
+            raise
+        if pt not in {'http', 'socks4', 'socks5', 'socks5h'}:
+            Log.error(f'Invalid proxy type: \'{pt}\'!')
+            raise ValueError
+        try:
+            pv, pp = tuple(pv.rsplit(':', 1))
+        except ValueError:
+            Log.error('Failed to split proxy address and port!')
+            raise
+        try:
+            pup, pvv = tuple(pv.rsplit('@', 1)) if ('@' in pv) else ('', pv)
+            if pup:
+                pup = f'{pup}@'
+        except ValueError:
+            Log.error('Failed to split proxy address and port!')
+            raise
+        try:
+            pva = IPv4Address(pvv)
+        except ValueError:
+            Log.error(f'Invalid proxy ip address value \'{pv}\'!')
+            raise
+        try:
+            ppi = int(pp)
+            assert 20 < ppi < 2 ** (8 * sizeof(c_uint16))
+        except (ValueError, AssertionError):
+            Log.error(f'Invalid proxy port value \'{pp}\'!')
+            raise
+        return f'{pt}://{pup}{pva!s}:{ppi:d}'
+    except Exception:
+        raise ArgumentError
+
+
+def naming_flags(flags: str) -> int:
+    try:
+        if flags[0].isnumeric():
+            intflags = int(flags, base=16 if flags.startswith('0x') else 10)
+            assert intflags & ~NamingFlags.ALL == 0
+        else:
+            intflags = sum(int(NAMING_FLAGS[fname], base=16) for fname in flags.split('|'))
+        return intflags
+    except Exception:
+        raise ArgumentError
+
+
+def log_level(level: str) -> int:
+    try:
+        return int(LOGGING_FLAGS[level], 16)
+    except Exception:
+        raise ArgumentError
+
+
+def valid_timeout(timeout: str) -> ClientTimeout:
+    try:
+        timeout_int = positive_nonzero_int(timeout) if timeout else CONNECT_TIMEOUT_BASE
+        return ClientTimeout(total=None, connect=timeout_int, sock_connect=timeout_int, sock_read=float(CONNECT_TIMEOUT_SOCKET_READ))
+    except Exception:
+        raise ArgumentError
+
+
+def valid_range(range_str: str) -> NumRange:
+    try:
+        range_str = range_str or f'0-{2 ** 40:d}'
+        parts = range_str.split('-', maxsplit=2)
+        assert len(parts) == 2
+        rmin = valid_number(parts[0], lb=0.0, ub=float(2 ** 40), rfloat=True)
+        rmax = valid_number(parts[1], lb=rmin, ub=float(2 ** 40), rfloat=True)
+        return NumRange(rmin, rmax)
+    except Exception:
+        raise ArgumentError
+
+#
+#
+#########################################
