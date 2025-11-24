@@ -6,7 +6,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 #
 
-from enum import IntEnum, StrEnum
+from enum import Enum, IntEnum
 from typing import NamedTuple
 
 CONNECT_RETRY_DELAY = (4.0, 8.0)
@@ -26,7 +26,7 @@ SITE_PRIMARY = f'{HTTPS_PREFIX}mega.nz'
 SITE_API = f'{HTTPS_PREFIX}g.api.mega.co.nz/cs'
 
 
-class DownloadMode(StrEnum):
+class DownloadMode(str, Enum):
     FULL = 'full'
     TOUCH = 'touch'
     SKIP = 'skip'
