@@ -88,10 +88,14 @@ def decrypt_attr(attr: bytes, key: Sequence[int]) -> Attributes:
         attr_str = attr_bytes.decode(LATIN1).rstrip('\0')
     if attr_str.startswith('MEGA{"'):
         start = 4
-        end = attr_str.find('}', start + 1) + 1
+        end = attr_str.find('"}', start + 1) + 2
         if end > start:
-            ret_data: dict[str, str] = json.loads(attr_str[start:end])
-            return ret_data
+            try:
+                ret_data: dict[str, str] = json.loads(attr_str[start:end])
+                return ret_data
+            except json.JSONDecodeError:
+                print(f'Invalid json: {attr_str} at [{start}:{end}]!')
+                raise
         else:
             raise ValueError(f'Failed to decode attr, raw was: \'{attr_str}\'')
     else:
