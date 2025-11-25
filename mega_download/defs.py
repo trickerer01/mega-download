@@ -61,8 +61,8 @@ HELP_ARG_LOGGING = (
     f' All messages equal or above this level will be logged. Default is \'info\''
 )
 HELP_ARG_NOCOLORS = 'Disable logging level dependent colors in log'
-HELP_ARG_HEADER = 'Append additional header. Example: \'-header user_agent=googlebot/1.1\'. Can be used multiple times'
-HELP_ARG_COOKIE = 'Append additional cookie. Example: \'-cookie shm_user=user1\'. Can be used multiple times'
+HELP_ARG_HEADER = 'Append additional header. Can be used multiple times'
+HELP_ARG_COOKIE = 'Append additional cookie. Can be used multiple times'
 HELP_ARG_TIMEOUT = f'Connection timeout (in seconds). Default is \'{CONNECT_TIMEOUT_BASE:d}\''
 HELP_ARG_RETRIES = f'Connection retries count. Default is \'{CONNECT_RETRIES_BASE:d}\''
 
