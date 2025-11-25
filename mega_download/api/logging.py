@@ -28,39 +28,36 @@ class Logger(Protocol):
     def trace(text: str) -> None: ...
 
 
-class LoggerWrapper:
+class Log:
     logger = Logger
 
     @staticmethod
     def fatal(text: str) -> None:
-        LoggerWrapper.logger.fatal(text)
+        Log.logger.fatal(text)
 
     @staticmethod
     def error(text: str) -> None:
-        LoggerWrapper.logger.error(text)
+        Log.logger.error(text)
 
     @staticmethod
     def warn(text: str) -> None:
-        LoggerWrapper.logger.warn(text)
+        Log.logger.warn(text)
 
     @staticmethod
     def info(text: str) -> None:
-        LoggerWrapper.logger.info(text)
+        Log.logger.info(text)
 
     @staticmethod
     def debug(text: str) -> None:
-        LoggerWrapper.logger.debug(text)
+        Log.logger.debug(text)
 
     @staticmethod
     def trace(text: str) -> None:
-        LoggerWrapper.logger.trace(text)
+        Log.logger.trace(text)
 
 
 def set_logger(logger: Logger) -> None:
-    LoggerWrapper.logger = logger
-
-
-Log = LoggerWrapper
+    Log.logger = logger
 
 #
 #
