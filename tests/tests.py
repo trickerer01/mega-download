@@ -17,7 +17,7 @@ from mega_download.api import DownloadMode
 from mega_download.config import Config
 from mega_download.defs import LoggingFlags
 from mega_download.logger import Log
-from mega_download.util.strings import compose_link_v2
+from mega_download.util import compose_link_v2
 
 RUN_CONN_TESTS = 0
 

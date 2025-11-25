@@ -50,7 +50,7 @@ LOGGING_FLAGS_DEFAULT = LoggingFlags.INFO
 ACTION_STORE_TRUE = 'store_true'
 ACTION_APPEND = 'append'
 
-HELP_ARG_FILTERS = 'Available filters: file size (in Megabytes)'
+HELP_ARG_FILTERS = 'Available filters: file size (MB), file name (pattern)'
 HELP_ARG_VERSION = 'Show program\'s version number and exit'
 HELP_ARG_PATH = 'Download destination. Default is current folder'
 HELP_ARG_PROXY = 'Proxy to use, supports basic authentication'

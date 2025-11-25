@@ -6,6 +6,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 #
 
+import itertools
 import sys
 from asyncio import get_running_loop, run, sleep
 from collections.abc import Sequence
@@ -14,7 +15,7 @@ from .api import DownloadMode, Mega, MegaNZError, MegaOptions
 from .cmdargs import HelpPrintExitException, prepare_arglist
 from .config import Config
 from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR
-from .filters import FileSizeFilter
+from .filters import FileNameFilter, FileSizeFilter
 from .logger import Log
 from .version import APP_NAME, APP_VERSION
 
@@ -40,7 +41,10 @@ def make_mega_options() -> MegaOptions:
         proxy=Config.proxy,
         extra_headers=Config.extra_headers,
         extra_cookies=Config.extra_cookies,
-        filters=(FileSizeFilter(Config.filter_filesize),),
+        filters=(
+            *((FileSizeFilter(Config.filter_filesize),) if Config.filter_filesize else ()),
+            *((FileNameFilter(Config.filter_filename),) if Config.filter_filename else ()),
+        ),
         download_mode=DownloadMode(Config.download_mode),
         logger=Log,
     )
@@ -56,7 +60,7 @@ async def main(args: Sequence[str]) -> int:
     try:
         async with Mega(make_mega_options()) as mega:
             results = [await mega.download_url(link) for link in Config.links]
-            Log.info(f'{results!s}' or 'Nothing')
+        Log.info('\n'.join(_.name for _ in itertools.chain(*results)) or 'Nothing')
         return 0
     except MegaNZError:
         import traceback

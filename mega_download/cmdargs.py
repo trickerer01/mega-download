@@ -37,6 +37,7 @@ from .validators import (
     positive_int,
     valid_kwarg,
     valid_path,
+    valid_pattern,
     valid_proxy,
     valid_range,
     valid_timeout,
@@ -139,7 +140,8 @@ def parse_arglist(args: Sequence[str]) -> Namespace:
     par_cmd.add_argument('-g', '--disable-log-colors', action=ACTION_STORE_TRUE, help=HELP_ARG_NOCOLORS)
     par_cmd.add_argument('-h', '--header', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_HEADER, type=valid_kwarg)
     par_cmd.add_argument('-c', '--cookie', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_COOKIE, type=valid_kwarg)
-    par_cmd.add_argument('-fs', '--filter-filesize', metavar='#min-max', default=valid_range(''), help=HELP_ARG_FILTERS, type=valid_range)
+    par_cmd.add_argument('-fs', '--filter-filesize', metavar='#min-max', default=None, help='', type=valid_range)
+    par_cmd.add_argument('-fn', '--filter-filename', metavar='#pattern', default=None, help=HELP_ARG_FILTERS, type=valid_pattern)
     par_cmd.add_argument('-d', '--download-mode', default=DM_DEFAULT, help=HELP_ARG_DMMODE, choices=DOWNLOAD_MODES)
     par_cmd.add_argument(dest='links', nargs=ZERO_OR_MORE, help=HELP_ARG_LINKS)
 

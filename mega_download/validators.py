@@ -20,7 +20,7 @@ from .defs import (
     NumRange,
 )
 from .logger import Log
-from .util.filesystem import normalize_path
+from .util import build_regex_from_pattern, normalize_path
 
 
 def valid_kwarg(kwarg: str) -> tuple[str, str]:
@@ -127,6 +127,14 @@ def valid_range(range_str: str) -> NumRange:
         rmin = valid_number(parts[0], lb=0.0, ub=float(2 ** 40), rfloat=True)
         rmax = valid_number(parts[1], lb=rmin, ub=float(2 ** 40), rfloat=True)
         return NumRange(rmin, rmax)
+    except Exception:
+        raise ArgumentError
+
+
+def valid_pattern(pattern_str: str) -> str:
+    try:
+        _ = build_regex_from_pattern(pattern_str)
+        return pattern_str
     except Exception:
         raise ArgumentError
 

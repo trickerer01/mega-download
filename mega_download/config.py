@@ -26,6 +26,7 @@ class BaseConfig:
     def __init__(self) -> None:
         # new
         self.filter_filesize: NumRange | None = None
+        self.filter_filename: str | None = None
         # common
         self.links: list[str] | None = None
         self.dest_base: str | None = None

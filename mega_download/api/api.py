@@ -19,8 +19,7 @@ from aiofile import async_open
 from aiohttp import ClientConnectorError, ClientResponse, ClientResponseError, ClientSession, ClientTimeout, TCPConnector
 from aiohttp_socks import ProxyConnector
 
-from mega_download.util.strings import compose_link_v2, ensure_scheme_https
-from mega_download.util.useragent import UAManager
+from mega_download.util import UAManager, compose_link_v2, ensure_scheme_https
 
 from .chunkgen import make_chunk_decryptor, make_chunk_generator
 from .containers import (
@@ -372,7 +371,7 @@ class Mega:
     async def _download_file(self) -> pathlib.Path:
         fk_arr = base64_to_ints(self._parsed.key_b64)
         file: File = await self.query_api([{'a': 'g', 'g': 1, 'p': self._parsed.file_id}])
-        k = (fk_arr[0] ^ fk_arr[4], fk_arr[1] ^ fk_arr[5], fk_arr[2] ^ fk_arr[6], fk_arr[3] ^ fk_arr[7])
+        k_decrypted = (fk_arr[0] ^ fk_arr[4], fk_arr[1] ^ fk_arr[5], fk_arr[2] ^ fk_arr[6], fk_arr[3] ^ fk_arr[7])
         iv = (*fk_arr[4:6], 0, 0)
         meta_mac = fk_arr[6:8]
 
@@ -385,7 +384,7 @@ class Mega:
         file_url = file['g']
         file_size = file['s']
         attribs_bytes = base64_url_decode(file['at'])
-        attribs = decrypt_attr(attribs_bytes, k)
+        attribs = decrypt_attr(attribs_bytes, k_decrypted)
         file_name: str = attribs['n']
         self._queue_size = 1
 
@@ -397,7 +396,7 @@ class Mega:
             Log.info(f'File {file_name} was filtered out by {ffilter!s}. Skipped!')
             return output_path
 
-        return await self._download(DownloadParams(0, file_url_https, output_path, file_size, iv, meta_mac, k))
+        return await self._download(DownloadParams(0, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted))
 
     async def _download(self, params: DownloadParams) -> pathlib.Path:
         if self._download_mode == DownloadMode.SKIP:
@@ -454,6 +453,7 @@ class Mega:
                         await output_file.write(decrypted_chunk)
         try:
             if self._aborted or touch:
+                # No guarantee of generator being fully consumed
                 chunk_decryptor.close()
             else:
                 # Finalize decryptor (trigger integrity check)
