@@ -12,6 +12,7 @@ import pathlib
 import random
 import re
 from asyncio import gather, sleep
+from collections.abc import Sequence
 from typing import TypeAlias
 
 from aiofile import async_open
@@ -26,6 +27,7 @@ from .containers import (
     DownloadParams,
     File,
     Folder,
+    IntVector,
     NodeType,
     ParsedUrl,
     SharedKey,
@@ -70,7 +72,7 @@ class Mega:
         self._sequence_num: int = urand()
         self._sid: str = ''
         self._user_nodes: dict[NodeType, str] = {}
-        self._master_key: tuple[int, ...] = ()
+        self._master_key: IntVector = ()
         self._shared_keys: SharedkeysDict = {}
         self._queue_size: int = 0
         self._parsed: ParsedUrl = ParsedUrl.default()
@@ -230,7 +232,7 @@ class Mega:
             nodes.append(pnode)
         return nodes
 
-    async def _prepare_nodes(self, folder_id: str, shared_key: tuple[int, ...]) -> list[File | Folder]:
+    async def _prepare_nodes(self, folder_id: str, shared_key: Sequence[int]) -> list[File | Folder]:
         nodes: list[File | Folder] = []
         for file_or_folder in await self._get_nodes_in_shared_folder(folder_id):
             encrypted_key = base64_to_ints(file_or_folder['k'].split(':')[1])
@@ -240,7 +242,7 @@ class Mega:
             elif file_or_folder['t'] == NodeType.FOLDER:
                 k = key
             else:
-                assert False
+                assert False, f'Unhandled node type {file_or_folder["t"]} found in folder {folder_id}!'
 
             iv = (*key[4:6], 0, 0)
             meta_mac = key[6:8]
@@ -258,7 +260,7 @@ class Mega:
         if file_or_folder['t'] == NodeType.FILE or file_or_folder['t'] == NodeType.FOLDER:
             keys = dict(tuple[str, str](keypart.split(':', 1)) for keypart in file_or_folder['k'].split('/') if ':' in keypart)
             uid: str = file_or_folder['u']
-            key: tuple[int, ...] | None = None
+            key: IntVector | None = None
             # user objects
             if uid in keys:
                 key = decrypt_key(base64_to_ints(keys[uid]), self._master_key)
@@ -337,17 +339,17 @@ class Mega:
 
         root_id: str = next(iter(fof_nodes))
         root_node: Folder = fof_nodes[root_id]
-        fs: dict[pathlib.PurePosixPath, File | Folder] = await self._build_file_system(fof_nodes, [root_id])
-        file_count = len({_ for _ in fs if fs[_]['t'] == NodeType.FILE})
+        ftree: dict[pathlib.PurePosixPath, File | Folder] = await self._build_file_system(fof_nodes, [root_id])
+        file_count = len({_ for _ in ftree if ftree[_]['t'] == NodeType.FILE})
         Log.info(f'Folder {self._parsed.folder_id}, root {root_id} \'{root_node["attributes"]["n"]}\': found {file_count:d} files...')
 
-        proc_queue: set[pathlib.PurePosixPath] = self._filter_folder_contents(fs)
-        self._queue_size = len({_ for _ in proc_queue if fs[_]['t'] == NodeType.FILE})
+        proc_queue: set[pathlib.PurePosixPath] = self._filter_folder_contents(ftree)
+        self._queue_size = len({_ for _ in proc_queue if ftree[_]['t'] == NodeType.FILE})
         Log.info(f'Saving {self._queue_size:d} / {file_count:d} files...')
 
         tasks = []
         idx = 0
-        for path, file_or_folder in fs.items():
+        for path, file_or_folder in ftree.items():
             if self._aborted:
                 return ()
             if file_or_folder['t'] != NodeType.FILE:
@@ -463,11 +465,11 @@ class Mega:
         Log.error(f'FAILED to download {output_path.name}!')
         return pathlib.Path()
 
-    def _filter_folder_contents(self, fs: dict[pathlib.PurePosixPath, File | Folder]) -> set[pathlib.PurePosixPath]:
+    def _filter_folder_contents(self, ftree: dict[pathlib.PurePosixPath, File | Folder]) -> set[pathlib.PurePosixPath]:
         proc_queue = set[pathlib.PurePosixPath]()
         file_idx = 0
         enqueued_idx = 0
-        for qpath, node in fs.items():
+        for qpath, node in ftree.items():
             if self._aborted:
                 break
             do_append = node['t'] != NodeType.FILE
@@ -494,7 +496,7 @@ class Mega:
                         ans = input(f'[{file_idx:d}] Download {qpath.name} ({file_size / Mem.MB:.2f} MB)? [Y/n]\n')
                     do_append = ans in 'yY1'
             if do_append:
-                if fs[qpath]['t'] == NodeType.FILE:
+                if ftree[qpath]['t'] == NodeType.FILE:
                     enqueued_idx += 1
                     Log.info(f'[{enqueued_idx:d}] {qpath.name} enqueued...')
                 proc_queue.add(qpath)
@@ -542,7 +544,7 @@ class Mega:
         return ParsedUrl(folder_id=root_folder_id, file_id=file_id, key_b64=shared_key)
 
     @staticmethod
-    def _init_shared_keys(folder: Folder, master_key: tuple[int, ...]) -> SharedkeysDict:
+    def _init_shared_keys(folder: Folder, master_key: Sequence[int]) -> SharedkeysDict:
         shared_key: SharedKey = {}
         for ok_item in folder['ok']:
             decrypted_shared_key = decrypt_key(base64_to_ints(ok_item['k']), master_key)

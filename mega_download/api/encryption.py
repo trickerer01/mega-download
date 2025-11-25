@@ -15,7 +15,7 @@ from collections.abc import Sequence
 
 from Crypto.Cipher import AES
 
-from .containers import Attributes
+from .containers import Attributes, IntVector
 from .defs import EMPTY_IV, LATIN1, UINT32_MAX, UTF8
 
 __all__ = (
@@ -50,7 +50,7 @@ def pack_sequence(array: Sequence[int]) -> bytes:
     return struct.pack(f'>{len(array):d}I', *array)
 
 
-def unpack_sequence(data: bytes) -> tuple[int, ...]:
+def unpack_sequence(data: bytes) -> IntVector:
     assert isinstance(data, bytes)  # required
     data_padded = pad_bytes_end(data, amount=4)  # sizeof(uint32)
     return struct.unpack(f'>{(len(data_padded) >> 2):d}I', data_padded)
@@ -64,19 +64,19 @@ def _decrypt_aes_cbc(data: bytes, key: bytes) -> bytes:
     return AES.new(key, AES.MODE_CBC, EMPTY_IV).decrypt(data)
 
 
-def _encrypt_aes_cbc_arr(ints: Sequence[int], key: Sequence[int]) -> tuple[int, ...]:
+def _encrypt_aes_cbc_arr(ints: Sequence[int], key: Sequence[int]) -> IntVector:
     return unpack_sequence(_encrypt_eas_cbc(pack_sequence(ints), pack_sequence(key)))
 
 
-def _decrypt_aes_cbc_ints(ints: Sequence[int], key: Sequence[int]) -> tuple[int, ...]:
+def _decrypt_aes_cbc_ints(ints: Sequence[int], key: Sequence[int]) -> IntVector:
     return unpack_sequence(_decrypt_aes_cbc(pack_sequence(ints), pack_sequence(key)))
 
 
-def encrypt_key(ints: Sequence[int], key: Sequence[int]) -> tuple[int, ...]:
+def encrypt_key(ints: Sequence[int], key: Sequence[int]) -> IntVector:
     return sum((_encrypt_aes_cbc_arr(ints[index:index + 4], key) for index in range(0, len(ints), 4)), ())
 
 
-def decrypt_key(ints: Sequence[int], key: Sequence[int]) -> tuple[int, ...]:
+def decrypt_key(ints: Sequence[int], key: Sequence[int]) -> IntVector:
     return sum((_decrypt_aes_cbc_ints(ints[index:index + 4], key) for index in range(0, len(ints), 4)), ())
 
 
@@ -98,7 +98,7 @@ def decrypt_attr(attr: bytes, key: Sequence[int]) -> Attributes:
         return Attributes(n='Unknown')
 
 
-def base64_to_ints(string: str) -> tuple[int, ...]:
+def base64_to_ints(string: str) -> IntVector:
     return unpack_sequence(base64_url_decode(string))
 
 

@@ -12,6 +12,8 @@ import pathlib
 from enum import IntEnum
 from typing import NamedTuple, TypeAlias, TypedDict
 
+IntVector: TypeAlias = tuple[int, ...]
+
 
 class Attributes(TypedDict):
     n: str  # Name
@@ -47,8 +49,8 @@ class Node(TypedDict):
 
     #  Non standard properties
     attributes: Attributes  # Decrypted attributes
-    k_decrypted: tuple[int, ...]
-    key_decrypted: tuple[int, ...]  # Decrypted access key (for folders, its values if the same as 'k_decrypted')
+    k_decrypted: IntVector
+    key_decrypted: IntVector  # Decrypted access key (for folders, its values if the same as 'k_decrypted')
 
 
 class File(Node):
@@ -59,9 +61,9 @@ class File(Node):
     s: int  # Size
 
     #  Non standard properties
-    iv: tuple[int, ...]
-    meta_mac: tuple[int, ...]
-    sk_decrypted: tuple[int, ...]
+    iv: IntVector
+    meta_mac: IntVector
+    sk_decrypted: IntVector
 
 
 class Folder(Node):
@@ -73,12 +75,12 @@ class Folder(Node):
     s: list[File | Folder]  # List of sub nodes
 
     #  Non standard properties
-    iv: tuple[int, ...]
-    meta_mac: tuple[int, ...]
-    sk_decrypted: tuple[int, ...]
+    iv: IntVector
+    meta_mac: IntVector
+    sk_decrypted: IntVector
 
 
-SharedKey: TypeAlias = dict[str, tuple[int, ...]]  # Mapping: (recipient) User Id ('u') -> decrypted value of shared key ('sk')
+SharedKey: TypeAlias = dict[str, IntVector]  # Mapping: (recipient) User Id ('u') -> decrypted value of shared key ('sk')
 SharedkeysDict: TypeAlias = dict[str, SharedKey]  # Mapping: (owner) Shared User Id ('su') -> SharedKey
 FilesMapping: TypeAlias = dict[str, File | Folder]  # Mapping: parent_id ('p') -> File | Folder
 
@@ -98,9 +100,9 @@ class DownloadParams(NamedTuple):
     direct_file_url: str
     output_path: pathlib.Path
     file_size: int
-    iv: tuple[int, ...]
-    meta_mac: tuple[int, ...]
-    k_decrypted: tuple[int, ...]
+    iv: IntVector
+    meta_mac: IntVector
+    k_decrypted: IntVector
 
 #
 #

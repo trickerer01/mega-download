@@ -36,7 +36,7 @@ def make_chunk_generator(chunk_size: int) -> Generator[Chunk]:
     yield Chunk(offset, chunk_size - offset)
 
 
-def make_chunk_decryptor(iv: Sequence[int], k_decrypted: Sequence[int], meta_mac: tuple[int, ...]) -> Generator[bytes, bytes | None, None]:
+def make_chunk_decryptor(iv: Sequence[int], k_decrypted: Sequence[int], meta_mac: Sequence[int]) -> Generator[bytes, bytes | None, None]:
     """
     Decrypts chunks of data received via `send()` and yields the decrypted chunks.
     It decrypts chunks indefinitely until a sentinel value (`None`) is sent.
