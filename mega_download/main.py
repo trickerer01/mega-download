@@ -10,10 +10,11 @@ import sys
 from asyncio import get_running_loop, run, sleep
 from collections.abc import Sequence
 
-from .api import DownloadMode, FileSizeFilter, Mega, MegaNZError, MegaOptions
+from .api import DownloadMode, Mega, MegaNZError, MegaOptions
 from .cmdargs import HelpPrintExitException, prepare_arglist
 from .config import Config
 from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR
+from .filters import FileSizeFilter
 from .logger import Log
 from .version import APP_NAME, APP_VERSION
 

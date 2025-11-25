@@ -19,7 +19,7 @@ from aiofile import async_open
 from aiohttp import ClientConnectorError, ClientResponse, ClientResponseError, ClientSession, ClientTimeout, TCPConnector
 from aiohttp_socks import ProxyConnector
 
-from mega_download.util.strings import ensure_scheme_https
+from mega_download.util.strings import compose_link_v2, ensure_scheme_https
 from mega_download.util.useragent import UAManager
 
 from .chunkgen import make_chunk_decryptor, make_chunk_generator
@@ -97,6 +97,10 @@ class Mega:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if self._session and not self._session.closed:
             await self._session.close()
+
+    @property
+    def original_url(self):
+        return compose_link_v2(self._parsed.folder_id, self._parsed.file_id, self._parsed.key_b64)
 
     def _make_session(self) -> ClientSession:
         if self._session is not None:

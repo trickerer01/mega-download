@@ -1,7 +1,7 @@
 from .api import Mega
-from .defs import DownloadMode
+from .containers import File, Folder
+from .defs import DownloadMode, DownloadResult, Mem, NumRange
 from .exceptions import MegaNZError
-from .filters import FileSizeFilter
 from .options import MegaOptions
 
-__all__ = ('DownloadMode', 'FileSizeFilter', 'Mega', 'MegaNZError', 'MegaOptions')
+__all__ = ('DownloadMode', 'DownloadResult', 'File', 'Folder', 'Mega', 'MegaNZError', 'MegaOptions', 'Mem', 'NumRange')
