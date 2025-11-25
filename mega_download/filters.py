@@ -19,7 +19,7 @@ class FileSizeFilter:
     def __init__(self, irange: NumRange) -> None:
         self._range = irange
 
-    def matches(self, file: File) -> bool:
+    def filters_out(self, file: File) -> bool:
         file_size = file['s']
         file_size /= FileSizeFilter.resolution
         return not self._range.min <= file_size <= self._range.max

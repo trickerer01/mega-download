@@ -15,13 +15,13 @@ __all__ = ('Filter', 'any_filter_matching')
 
 
 class Filter(Protocol):
-    def matches(self, file: File) -> bool: ...
+    def filters_out(self, file: File) -> bool: ...
     def __str__(self) -> str: ...
 
 
 def any_filter_matching(file: File, filters: Iterable[Filter]) -> Filter | None:
     for ffilter in filters:
-        if ffilter.matches(file):
+        if ffilter.filters_out(file):
             return ffilter
     return None
 
