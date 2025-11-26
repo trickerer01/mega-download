@@ -15,7 +15,6 @@ __all__ = ('Config',)
 
 
 class BaseConfig:
-    """Parameters container for params used in both **pages** and **ids** modules"""
     NAMESPACE_VARS_REMAP = {
         'file': 'links_file',
         'path': 'dest_base',
