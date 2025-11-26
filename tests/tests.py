@@ -42,7 +42,7 @@ class CmdTests(TestCase):
         print(f'{self._testMethodName} passed')
 
 
-class DownloadTouchTests(TestCase):
+class DownloadTests(TestCase):
     @test_prepare()
     def test_download_touch_1(self):
         if not RUN_CONN_TESTS:
@@ -51,15 +51,16 @@ class DownloadTouchTests(TestCase):
             tempfile_name = 'oem_mx/c_p_mx.edf'
             tempfile_path = pathlib.Path(tempdir_name) / tempfile_name
             templink = compose_link_v2('6cE1AazL', 'jAsE1BiZ', '9ISiN871PS8mBAKIkiSLdw')
+            tempfile_size = 0
             arglist = [
                 templink,
-                '-o', tempfile_path.parent.parent.as_posix(),
-                '-d', DownloadMode.TOUCH.value,
-                '-v', LoggingFlags.INFO.name.lower(),
+                '--path', tempfile_path.parent.parent.as_posix(),
+                '--download-mode', DownloadMode.TOUCH.value,
+                '--log-level', LoggingFlags.INFO.name.lower(),
             ]
             main_sync(arglist)
             self.assertTrue(tempfile_path.exists())
-            self.assertEqual(0, tempfile_path.stat().st_size)
+            self.assertEqual(tempfile_size, tempfile_path.stat().st_size)
         print(f'{self._testMethodName} passed')
 
     @test_prepare()
@@ -70,19 +71,18 @@ class DownloadTouchTests(TestCase):
             tempfile_name = 'KTM_CBF_18.pnt'
             tempfile_path = pathlib.Path(tempdir_name) / tempfile_name
             templink = compose_link_v2('', 'WVczzLpB', 'faIpcuNadIMU4uLyNQ1LfWFhAHBwPewtxxSiTIdeHWI')
+            tempfile_size = 0
             arglist = [
                 templink,
-                '-o', tempfile_path.parent.as_posix(),
-                '-d', DownloadMode.TOUCH.value,
-                '-v', LoggingFlags.INFO.name.lower(),
+                '--path', tempfile_path.parent.as_posix(),
+                '--download-mode', DownloadMode.TOUCH.value,
+                '--log-level', LoggingFlags.INFO.name.lower(),
             ]
             main_sync(arglist)
             self.assertTrue(tempfile_path.exists())
-            self.assertEqual(0, tempfile_path.stat().st_size)
+            self.assertEqual(tempfile_size, tempfile_path.stat().st_size)
         print(f'{self._testMethodName} passed')
 
-
-class DownloadFullTests(TestCase):
     @test_prepare()
     def test_download_full_1(self):
         if not RUN_CONN_TESTS:
@@ -91,15 +91,16 @@ class DownloadFullTests(TestCase):
             tempfile_name = 'oem_mx/p_mx_s.edf'
             tempfile_path = pathlib.Path(tempdir_name) / tempfile_name
             templink = compose_link_v2('6cE1AazL', 'qZsWyJ5K', '9ISiN871PS8mBAKIkiSLdw')
+            tempfile_size = 1172614
             arglist = [
                 templink,
-                '-o', tempfile_path.parent.parent.as_posix(),
-                '-d', DownloadMode.FULL.value,
-                '-v', LoggingFlags.INFO.name.lower(),
+                '--path', tempfile_path.parent.parent.as_posix(),
+                '--download-mode', DownloadMode.FULL.value,
+                '--log-level', LoggingFlags.INFO.name.lower(),
             ]
             main_sync(arglist)
             self.assertTrue(tempfile_path.exists())
-            self.assertEqual(1172614, tempfile_path.stat().st_size)
+            self.assertEqual(tempfile_size, tempfile_path.stat().st_size)
         print(f'{self._testMethodName} passed')
 
     @test_prepare()
@@ -110,15 +111,16 @@ class DownloadFullTests(TestCase):
             tempfile_name = 'KTM_CBF_PUB.pnt'
             tempfile_path = pathlib.Path(tempdir_name) / tempfile_name
             templink = compose_link_v2('', 'PZFCVYYK', 'El6KmJzu_Z763NzYrLlCUdD_v2W1thlw22B-w3ko7u8')
+            tempfile_size = 5040037
             arglist = [
                 templink,
-                '-o', tempfile_path.parent.as_posix(),
-                '-d', DownloadMode.FULL.value,
-                '-v', LoggingFlags.INFO.name.lower(),
+                '--path', tempfile_path.parent.as_posix(),
+                '--download-mode', DownloadMode.FULL.value,
+                '--log-level', LoggingFlags.INFO.name.lower(),
             ]
             main_sync(arglist)
             self.assertTrue(tempfile_path.exists())
-            self.assertEqual(5040037, tempfile_path.stat().st_size)
+            self.assertEqual(tempfile_size, tempfile_path.stat().st_size)
         print(f'{self._testMethodName} passed')
 
 #

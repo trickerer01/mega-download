@@ -9,7 +9,3 @@ import mega_download
 
 if __name__ == '__main__':
     mega_download.main(sys.argv[1:])
-
-#
-#
-#########################################
