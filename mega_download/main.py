@@ -3,7 +3,7 @@
 Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 """
 #########################################
-# TODO: signal to abort
+#
 #
 
 import itertools
