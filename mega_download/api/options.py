@@ -6,6 +6,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 #
 
+import pathlib
 from typing import TypedDict
 
 from aiohttp import ClientTimeout
@@ -18,7 +19,7 @@ from .logging import Logger
 
 class MegaOptions(TypedDict):
     # for local
-    dest_base: str
+    dest_base: pathlib.Path
     retries: int
     timeout: ClientTimeout
     proxy: str

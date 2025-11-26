@@ -7,6 +7,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 
 if False is True:  # for hinting only
+    import pathlib  # noqa: I001
     from aiohttp import ClientTimeout  # noqa: I001
     from defs import NumRange
 
@@ -16,6 +17,7 @@ __all__ = ('Config',)
 class BaseConfig:
     """Parameters container for params used in both **pages** and **ids** modules"""
     NAMESPACE_VARS_REMAP = {
+        'file': 'links_file',
         'path': 'dest_base',
         'log_level': 'logging_flags',
         'disable_log_colors': 'nocolors',
@@ -28,9 +30,10 @@ class BaseConfig:
         self.filter_filesize: NumRange | None = None
         self.filter_filename: str | None = None
         self.dump_links: bool | None = None
-        # common
+        self.links_file: pathlib.Path | None = None
         self.links: list[str] | None = None
-        self.dest_base: str | None = None
+        # common
+        self.dest_base: pathlib.Path | None = None
         self.proxy: str | None = None
         self.download_mode: str | None = None
         self.logging_flags: int = 0

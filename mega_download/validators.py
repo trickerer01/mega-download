@@ -6,7 +6,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 #
 
-import os
+import pathlib
 from argparse import ArgumentError
 from ipaddress import IPv4Address
 
@@ -16,11 +16,10 @@ from .defs import (
     CONNECT_TIMEOUT_BASE,
     CONNECT_TIMEOUT_SOCKET_READ,
     LOGGING_FLAGS,
-    SLASH,
     NumRange,
 )
 from .logger import Log
-from .util import build_regex_from_pattern, normalize_path
+from .util import build_regex_from_pattern
 
 
 def valid_kwarg(kwarg: str) -> tuple[str, str]:
@@ -54,13 +53,21 @@ def positive_nonzero_int(val: str) -> int:
     return valid_number(val, lb=1)
 
 
-def valid_path(pathstr: str) -> str:
+def valid_path(pathstr: str, *, is_file: bool) -> pathlib.Path:
     try:
-        newpath = normalize_path(os.path.expanduser(pathstr.strip('\'"')))
-        assert os.path.isdir(newpath[:(newpath.find(SLASH) + 1)])
+        newpath = pathlib.Path(pathstr.strip('\'"')).expanduser().absolute()
+        assert newpath.is_file() if is_file else newpath.is_dir()
         return newpath
     except Exception:
         raise ArgumentError
+
+
+def valid_folder_path(pathstr: str) -> pathlib.Path:
+    return valid_path(pathstr, is_file=False)
+
+
+def valid_file_path(pathstr: str) -> pathlib.Path:
+    return valid_path(pathstr, is_file=True)
 
 
 def valid_proxy(prox: str) -> str:

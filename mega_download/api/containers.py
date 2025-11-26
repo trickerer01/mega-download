@@ -95,7 +95,7 @@ class ParsedUrl(NamedTuple):
         return ParsedUrl('', '', '')
 
 
-class DownloadParams(NamedTuple):
+class DownloadParams(TypedDict):
     index: int
     direct_file_url: str
     output_path: pathlib.Path
@@ -103,6 +103,9 @@ class DownloadParams(NamedTuple):
     iv: IntVector
     meta_mac: IntVector
     k_decrypted: IntVector
+
+
+DownloadParamsDump: TypeAlias = dict[str, list[DownloadParams] | str]
 
 #
 #

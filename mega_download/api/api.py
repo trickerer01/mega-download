@@ -8,11 +8,14 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 
 from __future__ import annotations
 
+import json
 import pathlib
 import random
 import re
+import warnings
 from asyncio import gather, sleep
 from collections.abc import Sequence
+from inspect import get_annotations
 from typing import TypeAlias
 
 from aiofile import async_open
@@ -24,6 +27,7 @@ from mega_download.util import UAManager, compose_link_v2, ensure_scheme_https
 from .chunkgen import make_chunk_decryptor, make_chunk_generator
 from .containers import (
     DownloadParams,
+    DownloadParamsDump,
     File,
     Folder,
     IntVector,
@@ -33,7 +37,7 @@ from .containers import (
     SharedkeysDict,
     UserInfo,
 )
-from .defs import CONNECT_RETRY_DELAY, MAX_QUEUE_SIZE, SITE_API, UINT32_MAX, DownloadMode, Mem
+from .defs import CONNECT_RETRY_DELAY, MAX_QUEUE_SIZE, SITE_API, UINT32_MAX, UTF8, DownloadMode, Mem
 from .encryption import (
     base64_to_ints,
     base64_url_decode,
@@ -77,7 +81,7 @@ class Mega:
         self._queue_size: int = 0
         self._parsed: ParsedUrl = ParsedUrl.default()
         # options
-        self._dest_base: str = options['dest_base']
+        self._dest_base: pathlib.Path = options['dest_base']
         self._retries: int = options['retries']
         self._timeout: ClientTimeout = options['timeout']
         self._proxy: str = options['proxy']
@@ -88,8 +92,9 @@ class Mega:
         self._download_mode: DownloadMode = options['download_mode']
         # ensure correct args
         assert Log
-        assert self._dest_base
+        assert self._dest_base.is_dir()
         assert isinstance(self._download_mode, DownloadMode)
+        _ = self._download_mode
 
     async def __aenter__(self) -> Mega:
         return self
@@ -102,9 +107,19 @@ class Mega:
     def original_url(self):
         return compose_link_v2(self._parsed.folder_id, self._parsed.file_id, self._parsed.key_b64)
 
+    @staticmethod
+    def _make_download_params(
+        index: int, direct_file_url: str, output_path: pathlib.Path,
+        file_size: int, iv: IntVector, meta_mac: IntVector, k_decrypted: IntVector,
+    ) -> DownloadParams:
+        return DownloadParams(
+            index=index, direct_file_url=direct_file_url, output_path=output_path,
+            file_size=file_size, iv=iv, meta_mac=meta_mac, k_decrypted=k_decrypted,
+        )
+
     def _before_download(self, download_params: DownloadParams) -> None:
         for hook in self._before_download_hooks:
-            hook.execute(download_params)
+            hook.execute(self.original_url, download_params)
 
     def abort(self) -> None:
         Log.warn('Aborting...')
@@ -318,7 +333,60 @@ class Mega:
                 file_or_folder['attributes'] = {'n': 'Unknown Object'}
         return file_or_folder
 
+    def _parse_file(self, links_file: pathlib.Path) -> list[DownloadParams]:
+        assert links_file.is_file(), f'File \'{links_file}\' not found!'
+
+        with open(links_file, 'rt', encoding=UTF8) as infile:
+            json_: DownloadParamsDump = json.load(infile)
+
+        download_param_list: list[DownloadParams] = []
+        for _, fdata_or_str in json_.items():
+            if isinstance(fdata_or_str, list) and fdata_or_str[0].keys() == get_annotations(DownloadParams).keys():
+                file_datas: list[DownloadParams] = fdata_or_str
+                download_param_list.extend(DownloadParams(
+                    index=file_data['index'],
+                    direct_file_url=file_data['direct_file_url'],
+                    output_path=self._dest_base / file_data['output_path'],
+                    file_size=file_data['file_size'],
+                    iv=IntVector(file_data['iv']),
+                    meta_mac=IntVector(file_data['meta_mac']),
+                    k_decrypted=IntVector(file_data['k_decrypted']),
+                ) for file_data in file_datas)
+        return download_param_list
+
+    async def download_from_file(self, links_file: pathlib.Path) -> tuple[pathlib.Path, ...]:
+        """
+        Parse JSON file containing required file matadata gotten from running
+        mega downloader with '--dump-links' flag and download all the files
+        :param links_file: pathlib.Path to JSON file
+        :return: processed file paths
+        """
+        warnings.warn('Entry point \'download_from_file\' is unreliable and should not be used', DeprecationWarning)
+
+        async def proc_download_params(dparams: DownloadParams) -> pathlib.Path:
+            self._before_download(dparams)
+            return await self._download(dparams)
+
+        donwload_param_list = self._parse_file(links_file)
+        Log.info(f'Parsed {links_file.name}: found {len(donwload_param_list):d} files')
+
+        tasks = []
+        for download_params in donwload_param_list:
+            if self._aborted:
+                return ()
+            tasks.append(proc_download_params(download_params))
+
+        await self._login()
+        results: tuple[pathlib.Path | BaseException, ...] = await gather(*tasks)
+        Log.info(f'Downloaded {len([c for c in results if isinstance(c, pathlib.Path)])} / {len(tasks)} files')
+        return results
+
     async def download_url(self, url: str) -> tuple[pathlib.Path, ...]:
+        """
+        Parse given folder or file URL and download found files
+        :param url: mega link url
+        :return: processed file paths
+        """
         self._parsed = self._parse_url(url)
         assert self._parsed.key_b64
         assert self._parsed.folder_id or self._parsed.file_id
@@ -338,12 +406,12 @@ class Mega:
         file_data: File = await self.query_api({'a': 'g', 'g': 1, 'n': file['h']}, add_params={'n': self._parsed.folder_id})
         file_url = file_data['g']
         file_size = file_data['s']
-        download_path = pathlib.Path(self._dest_base) / file_path
+        output_path = self._dest_base / file_path
         file_url_https = ensure_scheme_https(file_url)
         iv = file['iv']
         meta_mac = file['meta_mac']
         k_decrypted = file['k_decrypted']
-        download_params = DownloadParams(index, file_url_https, download_path, file_size, iv, meta_mac, k_decrypted)
+        download_params = self._make_download_params(index, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
         self._before_download(download_params)
         return await self._download(download_params)
 
@@ -396,31 +464,30 @@ class Mega:
         file_name: str = attribs['n']
         self._queue_size = 1
 
+        output_path = self._dest_base / file_name
         file_url_https = ensure_scheme_https(file_url)
-        dest_base = pathlib.Path(*((self._dest_base,) if isinstance(self._dest_base, str) else ()))
-        output_path = dest_base / file_name
 
         if ffilter := any_filter_matching(file, self._filters):
             Log.info(f'File {file_name} was filtered out by {ffilter!s}. Skipped!')
             return output_path
 
-        download_params = DownloadParams(0, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
+        download_params = self._make_download_params(0, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
         self._before_download(download_params)
         return await self._download(download_params)
 
     async def _download(self, params: DownloadParams) -> pathlib.Path:
         if self._download_mode == DownloadMode.SKIP:
-            return params.output_path
+            return params['output_path']
         if self._aborted:
-            return params.output_path
+            return params['output_path']
         assert self._session is not None
-        num = params.index + 1
-        direct_file_url = params.direct_file_url
-        output_path = params.output_path
-        file_size = params.file_size
-        iv = params.iv
-        meta_mac = params.meta_mac
-        k_decrypted = params.k_decrypted
+        num = params['index'] + 1
+        direct_file_url = params['direct_file_url']
+        output_path = params['output_path']
+        file_size = params['file_size']
+        iv = params['iv']
+        meta_mac = params['meta_mac']
+        k_decrypted = params['k_decrypted']
 
         touch = self._download_mode == DownloadMode.TOUCH
 
