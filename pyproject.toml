@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'mega-download'
-version = '0.4.30'
+version = '0.4.31'
 authors = [
     {name = 'trickerer01'},
 ]
@@ -140,7 +140,7 @@ select = [
 py-modules = ['mega_download', 'tests']
 
 [tool.ruff.lint.per-file-ignores]
-'src/main.py' = [
+'mega_download/main.py' = [
 ]
 
 [tool.ruff.lint.isort]

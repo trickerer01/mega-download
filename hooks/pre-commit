@@ -1,5 +1,5 @@
 #!/bin/sh
-python src/genrev.py
-git add src/version.py
+python mega_download/genrev.py
+git add mega_download/version.py
 git add pyproject.toml
 ruff check --fix --unsafe-fixes --show-fixes
