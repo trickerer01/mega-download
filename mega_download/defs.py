@@ -15,6 +15,8 @@ MIN_PYTHON_VERSION_STR = f'{MIN_PYTHON_VERSION[0]:d}.{MIN_PYTHON_VERSION[1]:d}'
 CONNECT_RETRIES_BASE = 50
 CONNECT_TIMEOUT_BASE = 10
 CONNECT_TIMEOUT_SOCKET_READ = 30
+MAX_JOBS_DEFAULT = 2
+MAX_JOBS_MAX = 8
 
 SCAN_CANCEL_KEYSTROKE = 'q'
 SCAN_CANCEL_KEYCOUNT = 2
@@ -65,6 +67,7 @@ HELP_ARG_NOCOLORS = 'Disable logging level dependent colors in log'
 HELP_ARG_HEADER = 'Append additional header. Can be used multiple times'
 HELP_ARG_COOKIE = 'Append additional cookie. Can be used multiple times'
 HELP_ARG_TIMEOUT = f'Connection timeout (in seconds). Default is \'{CONNECT_TIMEOUT_BASE:d}\''
+HELP_ARG_MAXJOBS = f'Maximum simultaneous connections, 1..{MAX_JOBS_MAX:d}'
 HELP_ARG_RETRIES = f'Connection retries count. Default is \'{CONNECT_RETRIES_BASE:d}\''
 # New
 HELP_ARG_FILE = 'Full path to saved links file'

@@ -16,7 +16,7 @@ import warnings
 from asyncio import gather, sleep
 from collections.abc import Sequence
 from inspect import get_annotations
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 from aiofile import async_open
 from aiohttp import ClientConnectorError, ClientResponse, ClientResponseError, ClientSession, ClientTimeout, TCPConnector
@@ -37,7 +37,7 @@ from .containers import (
     SharedkeysDict,
     UserInfo,
 )
-from .defs import CONNECT_RETRY_DELAY, MAX_QUEUE_SIZE, SITE_API, UINT32_MAX, UTF8, DownloadMode, Mem
+from .defs import CONNECT_RETRY_DELAY, SITE_API, UINT32_MAX, UTF8, DownloadMode, Mem
 from .encryption import (
     base64_to_ints,
     base64_url_decode,
@@ -56,6 +56,7 @@ from .filters import Filter, any_filter_matching
 from .hooks import DownloadParamsCallback
 from .logging import Log, set_logger
 from .options import MegaOptions
+from .request_queue import RequestQueue
 
 __all__ = ('Mega',)
 
@@ -83,7 +84,9 @@ class Mega:
         # options
         self._dest_base: pathlib.Path = options['dest_base']
         self._retries: int = options['retries']
+        self.max_jobs = options['max_jobs']
         self._timeout: ClientTimeout = options['timeout']
+        self._nodelay: bool = options['nodelay']
         self._proxy: str = options['proxy']
         self._extra_headers: list[tuple[str, str]] = options['extra_headers']
         self._extra_cookies: list[tuple[str, str]] = options['extra_cookies']
@@ -130,9 +133,9 @@ class Mega:
             raise ValidationError('make_session should only be called once!')
         use_proxy = bool(self._proxy)
         if use_proxy:
-            connector = ProxyConnector.from_url(self._proxy, limit=MAX_QUEUE_SIZE)
+            connector = ProxyConnector.from_url(self._proxy, limit=self.max_jobs)
         else:
-            connector = TCPConnector(limit=MAX_QUEUE_SIZE)
+            connector = TCPConnector(limit=self.max_jobs)
         session = ClientSession(connector=connector, read_bufsize=Mem.MB, timeout=self._timeout)
         new_useragent = UAManager.select_useragent(self._proxy if use_proxy else None)
         Log.trace(f'[{"P" if use_proxy else "NP"}] Selected user-agent \'{new_useragent}\'...')
@@ -144,6 +147,15 @@ class Mega:
             for ck, cv in self._extra_cookies:
                 session.cookie_jar.update_cookies({ck: cv})
         return session
+
+    async def _wrap_request(self, method: Literal['POST', 'GET'], url: str, **kwargs) -> ClientResponse:
+        """Queues request, updating headers/proxies beforehand, and returns the response"""
+        assert self._session is not None
+        if self._nodelay is False:
+            await RequestQueue.until_ready(url)
+        if 'timeout' not in kwargs:
+            kwargs.update(timeout=self._timeout)
+        return await self._session.request(method, url, **kwargs)
 
     async def query_api(self, data_input: dict[str, str], *, add_params: dict[str, str] | None = None) -> APIResponse:
         if self._session is None:
@@ -171,13 +183,14 @@ class Mega:
                     params['sid'] = self._sid
 
                 Log.trace(f'Sending API request: POST, params: {params!s}, input: {data_input!s}')
-                response = await self._session.post(SITE_API, params=params, json=data_input)
+                response = await self._wrap_request('POST', SITE_API, params=params, json=data_input)
 
                 hashcash_challenge: str = response.headers.get('X-Hashcash')
                 if hashcash_challenge:
                     hashcash_token = make_hashcash_token(hashcash_challenge)
+                    hashcash_headers = {'X-Hashcash': hashcash_token}
                     Log.info(f'Solving xhashcash login challenge..., Body: {hashcash_challenge} -> {hashcash_token}')
-                    response = await self._session.post(SITE_API, params=params, json=data_input, headers={'X-Hashcash': hashcash_token})
+                    response = await self._wrap_request('POST', SITE_API, params=params, json=data_input, headers=hashcash_headers)
                     if hashcash_challenge := response.headers.get('X-Hashcash'):
                         raise RequestError(f'Login failed. Mega requested a proof of work with xhashcash: {hashcash_challenge}')
 
@@ -480,7 +493,6 @@ class Mega:
             return params['output_path']
         if self._aborted:
             return params['output_path']
-        assert self._session is not None
         num = params['index'] + 1
         direct_file_url = params['direct_file_url']
         output_path = params['output_path']
@@ -517,7 +529,7 @@ class Mega:
         async with async_open(output_path, 'wb') as output_file:
             if not touch:
                 bytes_written = 0
-                async with self._session.get(direct_file_url) as response:
+                async with await self._wrap_request('GET', direct_file_url) as response:
                     for i, chunk in enumerate(chunk_generator):
                         raw_chunk: bytes = await response.content.readexactly(chunk.size)
                         decrypted_chunk: bytes = chunk_decryptor.send(raw_chunk)

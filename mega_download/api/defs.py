@@ -9,8 +9,8 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 from enum import Enum, IntEnum
 from typing import NamedTuple
 
+CONNECT_REQUEST_DELAY = 0.3
 CONNECT_RETRY_DELAY = (4.0, 8.0)
-MAX_QUEUE_SIZE = 1
 
 CHUNK_BLOCK_LEN = 16
 EMPTY_IV = b'\0' * CHUNK_BLOCK_LEN

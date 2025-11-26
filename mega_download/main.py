@@ -40,7 +40,9 @@ def make_mega_options(before_download_callbacks: Iterable[DownloadParamsCallback
     options = MegaOptions(
         dest_base=Config.dest_base,
         retries=Config.retries,
+        max_jobs=Config.max_jobs,
         timeout=Config.timeout,
+        nodelay=Config.nodelay,
         proxy=Config.proxy,
         extra_headers=Config.extra_headers,
         extra_cookies=Config.extra_cookies,

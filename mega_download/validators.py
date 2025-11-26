@@ -16,6 +16,7 @@ from .defs import (
     CONNECT_TIMEOUT_BASE,
     CONNECT_TIMEOUT_SOCKET_READ,
     LOGGING_FLAGS,
+    MAX_JOBS_MAX,
     NumRange,
 )
 from .logger import Log
@@ -124,6 +125,10 @@ def valid_timeout(timeout: str) -> ClientTimeout:
         return ClientTimeout(total=None, connect=timeout_int, sock_connect=timeout_int, sock_read=float(CONNECT_TIMEOUT_SOCKET_READ))
     except Exception:
         raise ArgumentError
+
+
+def valid_maxjobs(maxjobs_str: str) -> int:
+    return valid_number(maxjobs_str, lb=1, ub=MAX_JOBS_MAX)
 
 
 def valid_range(range_str: str) -> NumRange:

@@ -24,6 +24,7 @@ from .defs import (
     HELP_ARG_HEADER,
     HELP_ARG_LINKS,
     HELP_ARG_LOGGING,
+    HELP_ARG_MAXJOBS,
     HELP_ARG_NOCOLORS,
     HELP_ARG_PATH,
     HELP_ARG_PROXY,
@@ -31,6 +32,7 @@ from .defs import (
     HELP_ARG_TIMEOUT,
     HELP_ARG_VERSION,
     LOGGING_FLAGS_DEFAULT,
+    MAX_JOBS_DEFAULT,
 )
 from .logger import Log
 from .validators import (
@@ -39,6 +41,7 @@ from .validators import (
     valid_file_path,
     valid_folder_path,
     valid_kwarg,
+    valid_maxjobs,
     valid_pattern,
     valid_proxy,
     valid_range,
@@ -110,6 +113,7 @@ def add_common_args(par: ArgumentParser) -> None:
     par.add_argument('-o', '--path', default=valid_folder_path(os.path.curdir), help=HELP_ARG_PATH, type=valid_folder_path)
     par.add_argument('-x', '--proxy', metavar='#type://[u:p@]a.d.d.r:port', default=None, help=HELP_ARG_PROXY, type=valid_proxy)
     par.add_argument('-t', '--timeout', metavar='#seconds', default=valid_timeout(''), help=HELP_ARG_TIMEOUT, type=valid_timeout)
+    par.add_argument('-j', '--max-jobs', metavar='#number', default=MAX_JOBS_DEFAULT, help=HELP_ARG_MAXJOBS, type=valid_maxjobs)
     par.add_argument('-r', '--retries', metavar='#number', default=CONNECT_RETRIES_BASE, help=HELP_ARG_RETRIES, type=positive_int)
     par.add_argument('-v', '--log-level', default=LOGGING_DEFAULT, help=HELP_ARG_LOGGING, type=log_level)
     par.add_argument('-g', '--disable-log-colors', action=ACTION_STORE_TRUE, help=HELP_ARG_NOCOLORS)

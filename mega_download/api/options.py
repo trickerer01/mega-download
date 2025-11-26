@@ -21,7 +21,9 @@ class MegaOptions(TypedDict):
     # for local
     dest_base: pathlib.Path
     retries: int
+    max_jobs: int
     timeout: ClientTimeout
+    nodelay: bool
     proxy: str
     extra_headers: list[tuple[str, str]]
     extra_cookies: list[tuple[str, str]]

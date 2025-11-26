@@ -31,6 +31,7 @@ class BaseConfig:
         self.dump_links: bool | None = None
         self.links_file: pathlib.Path | None = None
         self.links: list[str] | None = None
+        self.max_jobs: int | None = None
         # common
         self.dest_base: pathlib.Path | None = None
         self.proxy: str | None = None
@@ -41,6 +42,8 @@ class BaseConfig:
         self.retries: int = 0
         self.extra_headers: list[tuple[str, str]] | None = None
         self.extra_cookies: list[tuple[str, str]] | None = None
+        # extra (not configurable)
+        self.nodelay: bool = False
 
     def _reset(self) -> None:
         self.__init__()  # noqa: PLC2801
