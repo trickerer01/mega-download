@@ -41,7 +41,7 @@ def make_chunk_decryptor(iv: Sequence[int], k_decrypted: Sequence[int], meta_mac
     Decrypts chunks of data received via `send()` and yields the decrypted chunks.
     It decrypts chunks indefinitely until a sentinel value (`None`) is sent.
     NOTE1: Initialize decryptor by requesting one chunk before interation 'next(chunker)'
-    NOTE2: You MUST send `None` after decrypting every chunk to execute the mac check
+    NOTE2: You MUST send `None` after decrypting last chunk to execute the mac check
     :param iv: Initialization vector (iv) as a list or tuple of two 32-bit unsigned integers
     :param k_decrypted: Decryption key as a tuple of four 32-bit unsigned integers
     :param meta_mac: The expected MAC value of the final file

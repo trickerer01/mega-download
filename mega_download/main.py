@@ -15,9 +15,10 @@ from contextlib import AsyncExitStack
 from .api import DownloadMode, DownloadParamsCallback, Mega, MegaNZError, MegaOptions
 from .cmdargs import HelpPrintExitException, prepare_arglist
 from .config import Config
-from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR
+from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR, SCAN_CANCEL_KEYCOUNT, SCAN_CANCEL_KEYSTROKE
 from .filters import FileNameFilter, FileSizeFilter
 from .hooks import create_before_download_callbacks
+from .input import wait_for_key
 from .logger import Log
 from .version import APP_NAME, APP_VERSION
 
@@ -63,10 +64,13 @@ async def main(args: Sequence[str]) -> int:
     try:
         before_download_callbacks = create_before_download_callbacks()
         mega = Mega(make_mega_options(before_download_callbacks))
+        abort_waiter = get_running_loop().create_task(wait_for_key(SCAN_CANCEL_KEYSTROKE, SCAN_CANCEL_KEYCOUNT, mega.abort))
         async with AsyncExitStack() as ctx:
             await ctx.enter_async_context(mega)
             [await ctx.enter_async_context(_) for _ in before_download_callbacks]
             results = [await mega.download_url(_) for _ in Config.links]
+        abort_waiter.cancel()
+        await abort_waiter
         Log.info('\n'.join(('\n', *(_.name for _ in itertools.chain(*results)))) or '\nNothing')
         return 0
     except MegaNZError:

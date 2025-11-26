@@ -89,7 +89,6 @@ class Mega:
         assert Log
         assert self._dest_base
         assert isinstance(self._download_mode, DownloadMode)
-        _ = self._download_mode
 
     async def __aenter__(self) -> Mega:
         return self
@@ -105,6 +104,10 @@ class Mega:
     def _before_download(self, download_params: DownloadParams) -> None:
         for hook in self._before_download_hooks:
             hook.execute(download_params)
+
+    def abort(self) -> None:
+        Log.warn('Aborting...')
+        self._aborted = True
 
     def _make_session(self) -> ClientSession:
         if self._session is not None:
@@ -435,7 +438,7 @@ class Mega:
                         Log.warn(f'Overwriting {output_path.name}...')
 
         touch_msg = ' <touch>' if touch else ''
-        size_msg = '0.0 / ' if touch else ''
+        size_msg = '0.00 / ' if touch else ''
         Log.info(f'Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{file_size / Mem.MB:.2f} MB)...')
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -448,8 +451,6 @@ class Mega:
                 bytes_written = 0
                 async with self._session.get(direct_file_url) as response:
                     for i, chunk in enumerate(chunk_generator):
-                        if self._aborted:
-                            break
                         raw_chunk: bytes = await response.content.readexactly(chunk.size)
                         decrypted_chunk: bytes = chunk_decryptor.send(raw_chunk)
                         actual_size = len(decrypted_chunk)
@@ -458,7 +459,7 @@ class Mega:
                         Log.info(f'[{num:d} / {self._queue_size:d}] {output_path.name} chunk {i + 1:d}: {dwn_progress_str}...')
                         await output_file.write(decrypted_chunk)
         try:
-            if self._aborted or touch:
+            if touch:
                 # No guarantee of generator being fully consumed
                 chunk_decryptor.close()
             else:
