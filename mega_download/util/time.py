@@ -48,6 +48,19 @@ def get_local_time_s(*, offset=0) -> str:
 def calculate_eta(container: Sized, request_delay: float) -> int:
     return int(2.0 + (request_delay + 0.2 + 0.02) * len(container))
 
+
+def time_now_fmt(fmt: str) -> str:
+    """datetime.now().strftime() wrapper"""
+    return datetime.datetime.now().strftime(fmt)
+
+
+def datetime_str_nfull() -> str:
+    """
+    date in format yyyy-mm-dd_hh_mm_ss
+    usable in file names
+    """
+    return time_now_fmt('%Y-%m-%d_%H_%M_%S')
+
 #
 #
 #########################################

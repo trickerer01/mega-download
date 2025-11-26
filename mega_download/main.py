@@ -3,19 +3,21 @@
 Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 """
 #########################################
-#
+# TODO: signal to abort
 #
 
 import itertools
 import sys
 from asyncio import get_running_loop, run, sleep
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
+from contextlib import AsyncExitStack
 
-from .api import DownloadMode, Mega, MegaNZError, MegaOptions
+from .api import DownloadMode, DownloadParamsCallback, Mega, MegaNZError, MegaOptions
 from .cmdargs import HelpPrintExitException, prepare_arglist
 from .config import Config
 from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR
 from .filters import FileNameFilter, FileSizeFilter
+from .hooks import create_before_download_callbacks
 from .logger import Log
 from .version import APP_NAME, APP_VERSION
 
@@ -33,7 +35,7 @@ def at_startup() -> None:
     Log.debug(f'Python {sys.version}\n{APP_NAME} ver {APP_VERSION}\nCommand-line args: {" ".join(sys.argv)}')
 
 
-def make_mega_options() -> MegaOptions:
+def make_mega_options(before_download_callbacks: Iterable[DownloadParamsCallback]) -> MegaOptions:
     options = MegaOptions(
         dest_base=Config.dest_base,
         retries=Config.retries,
@@ -46,6 +48,7 @@ def make_mega_options() -> MegaOptions:
             *((FileNameFilter(Config.filter_filename),) if Config.filter_filename else ()),
         ),
         download_mode=DownloadMode(Config.download_mode),
+        hooks_before_download=(*before_download_callbacks,),
         logger=Log,
     )
     return options
@@ -58,9 +61,13 @@ async def main(args: Sequence[str]) -> int:
         return 0
 
     try:
-        async with Mega(make_mega_options()) as mega:
-            results = [await mega.download_url(link) for link in Config.links]
-        Log.info('\n'.join(_.name for _ in itertools.chain(*results)) or 'Nothing')
+        before_download_callbacks = create_before_download_callbacks()
+        mega = Mega(make_mega_options(before_download_callbacks))
+        async with AsyncExitStack() as ctx:
+            await ctx.enter_async_context(mega)
+            [await ctx.enter_async_context(_) for _ in before_download_callbacks]
+            results = [await mega.download_url(_) for _ in Config.links]
+        Log.info('\n'.join(('\n', *(_.name for _ in itertools.chain(*results)))) or '\nNothing')
         return 0
     except MegaNZError:
         import traceback

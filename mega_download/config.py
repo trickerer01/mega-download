@@ -27,6 +27,7 @@ class BaseConfig:
         # new
         self.filter_filesize: NumRange | None = None
         self.filter_filename: str | None = None
+        self.dump_links: bool | None = None
         # common
         self.links: list[str] | None = None
         self.dest_base: str | None = None

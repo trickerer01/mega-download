@@ -50,7 +50,6 @@ LOGGING_FLAGS_DEFAULT = LoggingFlags.INFO
 ACTION_STORE_TRUE = 'store_true'
 ACTION_APPEND = 'append'
 
-HELP_ARG_FILTERS = 'Available filters: file size (MB), file name (pattern)'
 HELP_ARG_VERSION = 'Show program\'s version number and exit'
 HELP_ARG_PATH = 'Download destination. Default is current folder'
 HELP_ARG_PROXY = 'Proxy to use, supports basic authentication'
@@ -65,6 +64,9 @@ HELP_ARG_HEADER = 'Append additional header. Can be used multiple times'
 HELP_ARG_COOKIE = 'Append additional cookie. Can be used multiple times'
 HELP_ARG_TIMEOUT = f'Connection timeout (in seconds). Default is \'{CONNECT_TIMEOUT_BASE:d}\''
 HELP_ARG_RETRIES = f'Connection retries count. Default is \'{CONNECT_RETRIES_BASE:d}\''
+# New
+HELP_ARG_FILTERS = 'Available filters: file size (MB), file name (pattern)'
+HELP_ARG_DUMP_LINKS = 'Store all gathered links and other misc info for future processing'
 
 
 class NumRange(NamedTuple):

@@ -18,6 +18,7 @@ from .defs import (
     CONNECT_RETRIES_BASE,
     HELP_ARG_COOKIE,
     HELP_ARG_DMMODE,
+    HELP_ARG_DUMP_LINKS,
     HELP_ARG_FILTERS,
     HELP_ARG_HEADER,
     HELP_ARG_LINKS,
@@ -142,6 +143,7 @@ def parse_arglist(args: Sequence[str]) -> Namespace:
     par_cmd.add_argument('-c', '--cookie', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_COOKIE, type=valid_kwarg)
     par_cmd.add_argument('-fs', '--filter-filesize', metavar='#min-max', default=None, help='', type=valid_range)
     par_cmd.add_argument('-fn', '--filter-filename', metavar='#pattern', default=None, help=HELP_ARG_FILTERS, type=valid_pattern)
+    par_cmd.add_argument('-l', '--dump-links', action=ACTION_STORE_TRUE, help=HELP_ARG_DUMP_LINKS)
     par_cmd.add_argument('-d', '--download-mode', default=DM_DEFAULT, help=HELP_ARG_DMMODE, choices=DOWNLOAD_MODES)
     par_cmd.add_argument(dest='links', nargs=ZERO_OR_MORE, help=HELP_ARG_LINKS)
 

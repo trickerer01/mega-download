@@ -83,6 +83,7 @@ class Mega:
         self._extra_headers: list[tuple[str, str]] = options['extra_headers']
         self._extra_cookies: list[tuple[str, str]] = options['extra_cookies']
         self._filters: tuple[Filter, ...] = options['filters']
+        self._before_download_hooks = options['hooks_before_download']
         self._download_mode = options['download_mode']
         # ensure correct args
         assert Log
@@ -100,6 +101,10 @@ class Mega:
     @property
     def original_url(self):
         return compose_link_v2(self._parsed.folder_id, self._parsed.file_id, self._parsed.key_b64)
+
+    def _before_download(self, download_params: DownloadParams) -> None:
+        for hook in self._before_download_hooks:
+            hook.execute(download_params)
 
     def _make_session(self) -> ClientSession:
         if self._session is not None:
@@ -121,7 +126,7 @@ class Mega:
                 session.cookie_jar.update_cookies({ck: cv})
         return session
 
-    async def query_api(self, data_input: list[dict[str, str]], *, add_params: dict[str, str] | None = None) -> APIResponse:
+    async def query_api(self, data_input: dict[str, str], *, add_params: dict[str, str] | None = None) -> APIResponse:
         if self._session is None:
             self._session = self._make_session()
 
@@ -132,14 +137,15 @@ class Mega:
                 raise ConnectionError('Request failed, retrying')
             raise RequestError(int_resp)
 
-        extra_params: dict[str, str] = add_params or {}
+        data_input = [data_input]
+        add_params: dict[str, str] = add_params or {}
 
         retries = 0
         response: ClientResponse | None = None
         while retries <= self._retries:
             response = None
             try:
-                params: dict[str, int | str] = {'id': self._sequence_num} | extra_params
+                params: dict[str, int | str] = {'id': self._sequence_num} | add_params
                 self._sequence_num = (self._sequence_num + 1) % UINT32_MAX
 
                 if self._sid:
@@ -163,7 +169,7 @@ class Mega:
                 elif not isinstance(jresp, list):
                     raise RequestError(f'Unknown response: {jresp!r}')
                 elif jresp:
-                    first_element = jresp[0]
+                    first_element: str | int = jresp[0]
                     if isinstance(first_element, int):
                         return handle_int_resp(first_element)
                     return first_element
@@ -199,13 +205,13 @@ class Mega:
         password_key = [urand()] * 4
         self_challenge = [urand()] * 4
 
-        user: str = await self.query_api([{
+        user: str = await self.query_api({
             'a': 'up',
             'k': ints_to_base64(encrypt_key(master_key, password_key)),
             'ts': base64_url_encode(pack_sequence(self_challenge) + pack_sequence(encrypt_key(self_challenge, master_key))),
-        }])
+        })
 
-        resp: UserInfo = await self.query_api([{'a': 'us', 'user': user}])
+        resp: UserInfo = await self.query_api({'a': 'us', 'user': user})
         master_key_encrypted = base64_to_ints(resp['k'])
         self._master_key = decrypt_key(master_key_encrypted, password_key)
         if b64_tsid := resp.get('tsid'):
@@ -219,7 +225,7 @@ class Mega:
             raise LoginError(f'Fatal: login response does not contain \'tsid\' key. csid: \'{b64_csid}\'!')
 
     async def _get_nodes(self) -> list[File | Folder]:
-        folder: Folder = await self.query_api([{'a': 'f', 'c': 1, 'r': 1}])
+        folder: Folder = await self.query_api({'a': 'f', 'c': 1, 'r': 1})
         self._shared_keys = self._init_shared_keys(folder, self._master_key)
         nodes: list[File | Folder] = []
         for _, node in enumerate(folder['f'], 1):
@@ -228,7 +234,7 @@ class Mega:
         return nodes
 
     async def _get_nodes_in_shared_folder(self, folder_id: str) -> list[File | Folder]:
-        folder: Folder = await self.query_api([{'a': 'f', 'c': 1, 'ca': 1, 'r': 1}], add_params={'n': folder_id})
+        folder: Folder = await self.query_api({'a': 'f', 'c': 1, 'ca': 1, 'r': 1}, add_params={'n': folder_id})
         nodes: list[File | Folder] = []
         for _, node in enumerate(folder['f'], 1):
             pnode = self._process_node(node)
@@ -322,10 +328,10 @@ class Mega:
         else:
             return await self._download_file(),  # noqa: COM818
 
-    async def _download_folder_file(self, index: int, folder_id: str, file: File, file_path: pathlib.Path) -> pathlib.Path:
+    async def _download_folder_file(self, index: int, file: File, file_path: pathlib.Path) -> pathlib.Path:
         if self._aborted:
             return file_path
-        file_data: File = await self.query_api([{'a': 'g', 'g': 1, 'n': file['h']}], add_params={'n': folder_id})
+        file_data: File = await self.query_api({'a': 'g', 'g': 1, 'n': file['h']}, add_params={'n': self._parsed.folder_id})
         file_url = file_data['g']
         file_size = file_data['s']
         download_path = pathlib.Path(self._dest_base) / file_path
@@ -333,7 +339,9 @@ class Mega:
         iv = file['iv']
         meta_mac = file['meta_mac']
         k_decrypted = file['k_decrypted']
-        return await self._download(DownloadParams(index, file_url_https, download_path, file_size, iv, meta_mac, k_decrypted))
+        download_params = DownloadParams(index, file_url_https, download_path, file_size, iv, meta_mac, k_decrypted)
+        self._before_download(download_params)
+        return await self._download(download_params)
 
     async def _download_folder(self) -> tuple[pathlib.Path, ...]:
         fk_arr = base64_to_ints(self._parsed.key_b64)
@@ -341,27 +349,23 @@ class Mega:
         Log.trace(f'Folder {self._parsed.folder_id} nodes: {fof_nodes!s}')
 
         root_id: str = next(iter(fof_nodes))
-        root_node: Folder = fof_nodes[root_id]
         ftree: dict[pathlib.PurePosixPath, File | Folder] = await self._build_file_system(fof_nodes, [root_id])
-        file_count = len({_ for _ in ftree if ftree[_]['t'] == NodeType.FILE})
-        Log.info(f'Folder {self._parsed.folder_id}, root {root_id} \'{root_node["attributes"]["n"]}\': found {file_count:d} files...')
+        files: dict[pathlib.PurePosixPath, File] = {p: f for p, f in ftree.items() if f['t'] == NodeType.FILE}
+        Log.info(f'{fof_nodes[root_id]["attributes"]["n"]}: found {len(files):d} files...')
 
-        proc_queue: set[pathlib.PurePosixPath] = self._filter_folder_contents(ftree)
-        self._queue_size = len({_ for _ in proc_queue if ftree[_]['t'] == NodeType.FILE})
-        Log.info(f'Saving {self._queue_size:d} / {file_count:d} files...')
+        proc_queue: set[pathlib.PurePosixPath] = self._filter_files(files)
+        self._queue_size = len(proc_queue)
+        Log.info(f'Saving {self._queue_size:d} / {len(files):d} files...')
 
         tasks = []
         idx = 0
         for path, file_or_folder in ftree.items():
             if self._aborted:
                 return ()
-            if file_or_folder['t'] != NodeType.FILE:
-                Log.trace(f'Skipping non-file node {file_or_folder!s}...')
-                continue
             if path not in proc_queue:
                 Log.trace(f'Skipping excluded node {file_or_folder!s} ({path})...')
                 continue
-            tasks.append(self._download_folder_file(idx, self._parsed.folder_id, file_or_folder, pathlib.Path(path)))
+            tasks.append(self._download_folder_file(idx, file_or_folder, pathlib.Path(path)))
             idx += 1
 
         results: tuple[pathlib.Path | BaseException, ...] = await gather(*tasks)
@@ -370,7 +374,7 @@ class Mega:
 
     async def _download_file(self) -> pathlib.Path:
         fk_arr = base64_to_ints(self._parsed.key_b64)
-        file: File = await self.query_api([{'a': 'g', 'g': 1, 'p': self._parsed.file_id}])
+        file: File = await self.query_api({'a': 'g', 'g': 1, 'p': self._parsed.file_id})
         k_decrypted = (fk_arr[0] ^ fk_arr[4], fk_arr[1] ^ fk_arr[5], fk_arr[2] ^ fk_arr[6], fk_arr[3] ^ fk_arr[7])
         iv = (*fk_arr[4:6], 0, 0)
         meta_mac = fk_arr[6:8]
@@ -396,7 +400,9 @@ class Mega:
             Log.info(f'File {file_name} was filtered out by {ffilter!s}. Skipped!')
             return output_path
 
-        return await self._download(DownloadParams(0, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted))
+        download_params = DownloadParams(0, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
+        self._before_download(download_params)
+        return await self._download(download_params)
 
     async def _download(self, params: DownloadParams) -> pathlib.Path:
         if self._download_mode == DownloadMode.SKIP:
@@ -469,36 +475,33 @@ class Mega:
         Log.error(f'FAILED to download {output_path.name}!')
         return pathlib.Path()
 
-    def _filter_folder_contents(self, ftree: dict[pathlib.PurePosixPath, File | Folder]) -> set[pathlib.PurePosixPath]:
+    def _filter_files(self, ftree: dict[pathlib.PurePosixPath, File]) -> set[pathlib.PurePosixPath]:
         proc_queue = set[pathlib.PurePosixPath]()
         file_idx = 0
         enqueued_idx = 0
-        for qpath, node in ftree.items():
+        for qpath, file in ftree.items():
             if self._aborted:
                 break
-            do_append = node['t'] != NodeType.FILE
-            if not do_append:
-                # is file
-                file_idx += 1
-                file: File = node
-                if self._parsed.folder_id and self._parsed.file_id:
-                    file_id = file['h']
-                    do_append = file_id == self._parsed.file_id
-                    if not do_append:
-                        Log.trace(f'[{file_idx:d}] File \'{file_id}\' is not selected for download, skipped...')
-                        continue
-                elif self._filters:
-                    if ffilter := any_filter_matching(file, self._filters):
-                        file_name = file['attributes']['n']
-                        Log.info(f'[{file_idx:d}] File {file_name} was filtered out by {ffilter!s}. Skipped!')
-                        continue
-                    do_append = True
-                else:
-                    file_size = file['s']
-                    ans = 'q'
-                    while ans not in 'nNyY10':
-                        ans = input(f'[{file_idx:d}] Download {qpath.name} ({file_size / Mem.MB:.2f} MB)? [Y/n]\n')
-                    do_append = ans in 'yY1'
+            # is file
+            file_idx += 1
+            if self._parsed.folder_id and self._parsed.file_id:
+                file_id = file['h']
+                do_append = file_id == self._parsed.file_id
+                if not do_append:
+                    Log.trace(f'[{file_idx:d}] File \'{file_id}\' is not selected for download, skipped...')
+                    continue
+            elif self._filters:
+                if ffilter := any_filter_matching(file, self._filters):
+                    file_name = file['attributes']['n']
+                    Log.info(f'[{file_idx:d}] File {file_name} was filtered out by {ffilter!s}. Skipped!')
+                    continue
+                do_append = True
+            else:
+                file_size = file['s']
+                ans = 'q'
+                while ans not in 'nNyY10':
+                    ans = input(f'[{file_idx:d}] Download {qpath.name} ({file_size / Mem.MB:.2f} MB)? [Y/n]\n')
+                do_append = ans in 'yY1'
             if do_append:
                 if ftree[qpath]['t'] == NodeType.FILE:
                     enqueued_idx += 1

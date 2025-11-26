@@ -12,6 +12,7 @@ from aiohttp import ClientTimeout
 
 from .defs import DownloadMode
 from .filters import Filter
+from .hooks import DownloadParamsCallback
 from .logging import Logger
 
 
@@ -24,6 +25,7 @@ class MegaOptions(TypedDict):
     extra_headers: list[tuple[str, str]]
     extra_cookies: list[tuple[str, str]]
     filters: tuple[Filter, ...]
+    hooks_before_download: tuple[DownloadParamsCallback]
     download_mode: DownloadMode
     # for global
     logger: Logger
