@@ -65,12 +65,15 @@ async def main(args: Sequence[str]) -> int:
         before_download_callbacks = create_before_download_callbacks()
         mega = Mega(make_mega_options(before_download_callbacks))
         abort_waiter = get_running_loop().create_task(wait_for_key(SCAN_CANCEL_KEYSTROKE, SCAN_CANCEL_KEYCOUNT, mega.abort))
+
         async with AsyncExitStack() as ctx:
             await ctx.enter_async_context(mega)
             [await ctx.enter_async_context(_) for _ in before_download_callbacks]
             results = [await mega.download_url(_) for _ in Config.links]
+
         abort_waiter.cancel()
         await abort_waiter
+
         Log.info('\n'.join(('\n', *(_.name for _ in itertools.chain(*results)))) or '\nNothing')
         return 0
     except MegaNZError:

@@ -49,6 +49,7 @@ from .encryption import (
 )
 from .exceptions import LoginError, MegaErrorCodes, RequestError, ValidationError
 from .filters import Filter, any_filter_matching
+from .hooks import DownloadParamsCallback
 from .logging import Log, set_logger
 from .options import MegaOptions
 
@@ -66,7 +67,7 @@ class Mega:
         # globals
         set_logger(options['logger'])
         # locals
-        self._aborted = False
+        self._aborted: bool = False
         self._session: ClientSession | None = None
         self._sequence_num: int = urand()
         self._sid: str = ''
@@ -83,8 +84,8 @@ class Mega:
         self._extra_headers: list[tuple[str, str]] = options['extra_headers']
         self._extra_cookies: list[tuple[str, str]] = options['extra_cookies']
         self._filters: tuple[Filter, ...] = options['filters']
-        self._before_download_hooks = options['hooks_before_download']
-        self._download_mode = options['download_mode']
+        self._before_download_hooks: tuple[DownloadParamsCallback, ...] = options['hooks_before_download']
+        self._download_mode: DownloadMode = options['download_mode']
         # ensure correct args
         assert Log
         assert self._dest_base
