@@ -6,8 +6,8 @@ on:
       - 'master'
     paths:
       - .github/workflows/**
-      - 'src/*.py'
-      - '!src/version.py'
+      - 'mega_download/*.py'
+      - '!mega_download/version.py'
   pull_request:
     types:
       - opened
@@ -15,8 +15,8 @@ on:
       - synchronize
     paths:
       - .github/workflows/**
-      - 'src/*.py'
-      - '!src/version.py'
+      - 'mega_download/*.py'
+      - '!mega_download/version.py'
 
 permissions:
   contents: read
@@ -33,7 +33,7 @@ jobs:
       max-parallel: 6
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
