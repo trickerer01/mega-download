@@ -587,8 +587,10 @@ class Mega:
         root_folder_id = file_id = shared_key = ''
         if has_folder1 or has_folder2:
             if has_folder1:
+                # ex: {SITE}/folder/6cE1AazL#9ISiN871PS8mBAKIkiSLdw
                 parts = url.split(folder_lookup1, 1)[1]
                 if has_file1:
+                    # ex. {SITE}/folder/6cE1AazL#9ISiN871PS8mBAKIkiSLdw/file/qZsWyJ5K
                     assert url.index(folder_lookup1) < url.index(file_lookup1), f'Unsupported folder file link format \'{url}\'!'
                     parts = parts.split('/', 1)[0]
                     ffmatch = re_mega_folder_file_id.search(url)
@@ -602,7 +604,7 @@ class Mega:
         elif has_file1 or has_file2:
             if has_file1:
                 # V2 URL structure
-                # ex: https://mega.nz/file/cH51DYDR#qH7QOfRcM-7N9riZWdSjsRq
+                # ex: {SITE}/file/cH51DYDR#qH7QOfRcM-7N9riZWdSjsRq
                 url = url.replace(' ', '')
                 fmatch_v2 = re_mega_file_id_v2.search(url)
                 assert fmatch_v2, f'Unable to parse url v2: file id not found in \'{url}\'!'
@@ -610,7 +612,7 @@ class Mega:
                 shared_key = url[fmatch_v2.end():]
             elif has_file2:
                 # V1 URL structure
-                # ex: https://mega.nz/#!Ue5VRSIQ!kC2E4a4JwfWWCWYNJovGFHlbz8F
+                # ex: {SITE}/#!Ue5VRSIQ!kC2E4a4JwfWWCWYNJovGFHlbz8F
                 fmatch_v1 = re_mega_file_id_v1.search(url)
                 assert fmatch_v1, f'Unable to parse url v1: file id not found in \'{url}\'!'
                 file_id = fmatch_v1.group(1)
