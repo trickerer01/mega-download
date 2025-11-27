@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from mega_download import APP_NAME, main_sync
-from mega_download.api import DownloadMode
+from mega_download.api import DownloadMode, RequestQueue
 from mega_download.config import Config
 from mega_download.defs import LoggingFlags
 from mega_download.logger import Log
@@ -29,6 +29,7 @@ def test_prepare(log=False) -> Callable[[], Callable[[], None]]:
             def set_up_test() -> None:
                 Log._disabled = not log
                 Config._reset()
+                RequestQueue._reset()
             set_up_test()
             test_func(*args, **kwargs)
         return invoke_test

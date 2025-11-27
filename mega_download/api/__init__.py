@@ -4,6 +4,7 @@ from .defs import SITE_PRIMARY, DownloadMode, DownloadResult, Mem, NumRange
 from .exceptions import MegaNZError
 from .hooks import DownloadParamsCallback, FileSystemCallback
 from .options import MegaOptions
+from .request_queue import RequestQueue
 
 __all__ = (
     'SITE_PRIMARY',
@@ -21,4 +22,5 @@ __all__ = (
     'MegaOptions',
     'Mem',
     'NumRange',
+    'RequestQueue',
 )

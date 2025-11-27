@@ -22,7 +22,12 @@ class RequestQueue:
     _lock = asyncio.Lock()
 
     @staticmethod
-    async def _reset() -> None:
+    def _reset() -> None:
+        RequestQueue._ready = True
+        RequestQueue._queue.clear()
+
+    @staticmethod
+    async def _set_ready() -> None:
         await asyncio.sleep(random.uniform(CONNECT_REQUEST_DELAY, CONNECT_REQUEST_DELAY + 0.75))
         RequestQueue._ready = True
 
@@ -36,7 +41,7 @@ class RequestQueue:
         async with RequestQueue._lock:
             RequestQueue._queue.popleft()
             RequestQueue._ready = False
-            asyncio.get_running_loop().create_task(RequestQueue._reset())
+            asyncio.get_running_loop().create_task(RequestQueue._set_ready())
 
 #
 #
