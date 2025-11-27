@@ -10,7 +10,7 @@ import os
 from argparse import ONE_OR_MORE, ArgumentParser, Namespace
 from collections.abc import Sequence
 
-from .api.defs import DOWNLOAD_MODE_DEFAULT, DOWNLOAD_MODES
+from .api import DOWNLOAD_MODE_DEFAULT, DOWNLOAD_MODES
 from .config import Config
 from .defs import (
     ACTION_APPEND,

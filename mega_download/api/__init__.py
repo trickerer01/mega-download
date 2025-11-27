@@ -1,12 +1,14 @@
 from .api import Mega
 from .containers import DownloadParams, DownloadParamsDump, File, FileSystemDump, Folder
-from .defs import SITE_PRIMARY, DownloadMode, DownloadResult, Mem, NumRange
+from .defs import DOWNLOAD_MODE_DEFAULT, DOWNLOAD_MODES, SITE_PRIMARY, DownloadMode, DownloadResult, Mem, NumRange
 from .exceptions import MegaNZError
 from .hooks import DownloadParamsCallback, FileSystemCallback
 from .options import MegaOptions
 from .request_queue import RequestQueue
 
 __all__ = (
+    'DOWNLOAD_MODES',
+    'DOWNLOAD_MODE_DEFAULT',
     'SITE_PRIMARY',
     'DownloadMode',
     'DownloadParams',

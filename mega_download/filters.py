@@ -8,8 +8,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 
 from typing import Final
 
-from .api.containers import File
-from .api.defs import Mem, NumRange
+from .api import File, Mem, NumRange
 from .util import build_regex_from_pattern
 
 
