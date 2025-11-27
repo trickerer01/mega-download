@@ -17,7 +17,7 @@ from .api import SITE_PRIMARY, DownloadParams, DownloadParamsDump
 from .config import Config
 from .defs import SLASH, UTF8
 from .logger import Log
-from .util import datetime_str_nfull
+from .util import datetime_str_nfull, sanitize_filename
 
 __all__ = ('create_before_download_callbacks',)
 
@@ -35,7 +35,7 @@ class Callback(AbstractAsyncContextManager):
 class DumpLinksCallback(Callback):
     def __init__(self, filename_base: str) -> None:
         super().__init__()
-        self._filepath = pathlib.Path(Config.dest_base) / f'{filename_base}.json'
+        self._filepath = pathlib.Path(Config.dest_base) / f'{filename_base}_links.json'
         self._json: DownloadParamsDump = {
             'args': ' '.join(sys.argv[1:]),
         }
@@ -66,10 +66,10 @@ class DumpLinksCallback(Callback):
 
 
 def create_before_download_callbacks() -> set[Callback]:
-    filename_base = f'mega{Config.links[0].replace(SITE_PRIMARY, "").replace(SLASH, "_") if Config.links else ""}_{datetime_str_nfull()}'
+    url_trunc = sanitize_filename(Config.links[0].replace(SITE_PRIMARY, "").replace(SLASH, "_")) if Config.links else ""
     callbacks = set[Callback]()
     if Config.dump_links:
-        callbacks.add(DumpLinksCallback(filename_base))
+        callbacks.add(DumpLinksCallback(f'mega{url_trunc}_{datetime_str_nfull()}'))
     return callbacks
 
 #
