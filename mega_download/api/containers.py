@@ -13,6 +13,7 @@ from enum import IntEnum
 from typing import NamedTuple, TypeAlias, TypedDict
 
 IntVector: TypeAlias = tuple[int, ...]
+'''Tuple of ints of length 0, 2, 4 or 6'''
 
 
 class Attributes(TypedDict):
@@ -57,6 +58,8 @@ class File(Node):
     su: str  # Shared user Id, only present present in shared files / folder
     sk: str  # Shared key, only present present in shared files / folder
 
+    fh: str  # Root id? (pure file link)
+
     at: str  # File specific attributes (encrypted)
     s: int  # Size
 
@@ -80,9 +83,16 @@ class Folder(Node):
     sk_decrypted: IntVector
 
 
-SharedKey: TypeAlias = dict[str, IntVector]  # Mapping: (recipient) User Id ('u') -> decrypted value of shared key ('sk')
-SharedkeysDict: TypeAlias = dict[str, SharedKey]  # Mapping: (owner) Shared User Id ('su') -> SharedKey
-FilesMapping: TypeAlias = dict[str, File | Folder]  # Mapping: parent_id ('p') -> File | Folder
+SharedKey: TypeAlias = dict[str, IntVector]
+'''Mapping: (recipient) User Id ('u') -> decrypted value of shared key ('sk')'''
+SharedkeysDict: TypeAlias = dict[str, SharedKey]
+'''Mapping: (owner) Shared User Id ('su') -> SharedKey'''
+FilesMapping: TypeAlias = dict[str, File | Folder]
+'''Mapping: parent_id ('p') -> File | Folder'''
+FileSystemMapping: TypeAlias = dict[pathlib.PurePosixPath, File | Folder]
+'''Mapping: path -> File | Folder'''
+FilePathMapping: TypeAlias = dict[pathlib.PurePosixPath, File]
+'''Mapping: path -> File'''
 
 
 class ParsedUrl(NamedTuple):
@@ -106,6 +116,7 @@ class DownloadParams(TypedDict):
 
 
 DownloadParamsDump: TypeAlias = dict[str, list[DownloadParams] | str]
+FileSystemDump: TypeAlias = FileSystemMapping
 
 #
 #

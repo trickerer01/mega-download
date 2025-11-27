@@ -57,7 +57,7 @@ def positive_nonzero_int(val: str) -> int:
 def valid_path(pathstr: str, *, is_file: bool) -> pathlib.Path:
     try:
         newpath = pathlib.Path(pathstr.strip('\'"')).expanduser().absolute()
-        assert newpath.is_file() if is_file else newpath.is_dir()
+        assert newpath.is_file() if is_file else next(reversed(newpath.parents)).is_dir()
         return newpath
     except Exception:
         raise ArgumentError

@@ -29,6 +29,9 @@ from .containers import (
     DownloadParams,
     DownloadParamsDump,
     File,
+    FilePathMapping,
+    FilesMapping,
+    FileSystemMapping,
     Folder,
     IntVector,
     NodeType,
@@ -53,7 +56,7 @@ from .encryption import (
 )
 from .exceptions import LoginError, MegaErrorCodes, RequestError, ValidationError
 from .filters import Filter, any_filter_matching
-from .hooks import DownloadParamsCallback
+from .hooks import DownloadParamsCallback, FileSystemCallback
 from .logging import Log, set_logger
 from .options import MegaOptions
 from .request_queue import RequestQueue
@@ -84,7 +87,7 @@ class Mega:
         # options
         self._dest_base: pathlib.Path = options['dest_base']
         self._retries: int = options['retries']
-        self.max_jobs = options['max_jobs']
+        self._max_jobs = options['max_jobs']
         self._timeout: ClientTimeout = options['timeout']
         self._nodelay: bool = options['nodelay']
         self._proxy: str = options['proxy']
@@ -92,11 +95,13 @@ class Mega:
         self._extra_cookies: list[tuple[str, str]] = options['extra_cookies']
         self._filters: tuple[Filter, ...] = options['filters']
         self._before_download_hooks: tuple[DownloadParamsCallback, ...] = options['hooks_before_download']
+        self._after_scan_hooks: tuple[FileSystemCallback, ...] = options['hooks_after_scan']
         self._download_mode: DownloadMode = options['download_mode']
         # ensure correct args
         assert Log
-        assert self._dest_base.is_dir()
+        assert next(reversed(self._dest_base.parents)).is_dir()
         assert isinstance(self._download_mode, DownloadMode)
+        assert self._max_jobs > 0
         _ = self._download_mode
 
     async def __aenter__(self) -> Mega:
@@ -124,6 +129,10 @@ class Mega:
         for hook in self._before_download_hooks:
             hook.execute(self.original_url, download_params)
 
+    def _after_scan(self, root_id: str, ftree: FileSystemMapping) -> None:
+        for hook in self._after_scan_hooks:
+            hook.execute(root_id, ftree)
+
     def abort(self) -> None:
         Log.warn('Aborting...')
         self._aborted = True
@@ -133,9 +142,9 @@ class Mega:
             raise ValidationError('make_session should only be called once!')
         use_proxy = bool(self._proxy)
         if use_proxy:
-            connector = ProxyConnector.from_url(self._proxy, limit=self.max_jobs)
+            connector = ProxyConnector.from_url(self._proxy, limit=self._max_jobs)
         else:
-            connector = TCPConnector(limit=self.max_jobs)
+            connector = TCPConnector(limit=self._max_jobs)
         session = ClientSession(connector=connector, read_bufsize=Mem.MB, timeout=self._timeout)
         new_useragent = UAManager.select_useragent(self._proxy if use_proxy else None)
         Log.trace(f'[{"P" if use_proxy else "NP"}] Selected user-agent \'{new_useragent}\'...')
@@ -430,13 +439,15 @@ class Mega:
 
     async def _download_folder(self) -> tuple[pathlib.Path, ...]:
         fk_arr = base64_to_ints(self._parsed.key_b64)
-        fof_nodes: dict[str, File | Folder] = {node['h']: node for node in await self._prepare_nodes(self._parsed.folder_id, fk_arr)}
+        fof_nodes: FilesMapping = {node['h']: node for node in await self._prepare_nodes(self._parsed.folder_id, fk_arr)}
         Log.trace(f'Folder {self._parsed.folder_id} nodes: {fof_nodes!s}')
 
         root_id: str = next(iter(fof_nodes))
-        ftree: dict[pathlib.PurePosixPath, File | Folder] = await self._build_file_system(fof_nodes, [root_id])
-        files: dict[pathlib.PurePosixPath, File] = {p: f for p, f in ftree.items() if f['t'] == NodeType.FILE}
+        ftree: FileSystemMapping = await self._build_file_system(fof_nodes, [root_id])
+        files: FilePathMapping = {p: f for p, f in ftree.items() if f['t'] == NodeType.FILE}
         Log.info(f'{fof_nodes[root_id]["attributes"]["n"]}: found {len(files):d} files...')
+
+        self._after_scan(root_id, ftree)
 
         proc_queue: set[pathlib.PurePosixPath] = self._filter_files(files)
         self._queue_size = len(proc_queue)
@@ -459,10 +470,17 @@ class Mega:
 
     async def _download_file(self) -> pathlib.Path:
         fk_arr = base64_to_ints(self._parsed.key_b64)
-        file: File = await self.query_api({'a': 'g', 'g': 1, 'p': self._parsed.file_id})
         k_decrypted = (fk_arr[0] ^ fk_arr[4], fk_arr[1] ^ fk_arr[5], fk_arr[2] ^ fk_arr[6], fk_arr[3] ^ fk_arr[7])
         iv = (*fk_arr[4:6], 0, 0)
         meta_mac = fk_arr[6:8]
+        file: File = await self.query_api({'a': 'g', 'g': 1, 'p': self._parsed.file_id})
+        file_url = file['g']
+        file_size = file['s']
+        attribs = decrypt_attr(base64_url_decode(file['at']), k_decrypted)
+        file_name: str = attribs['n']
+        ftree: FileSystemMapping = {pathlib.PurePosixPath(file_name): file}
+
+        self._after_scan(file['fh'], ftree)
 
         # Seems to happens sometimes... When this occurs, files are
         # inaccessible also in the official web app.
@@ -470,13 +488,7 @@ class Mega:
         if 'g' not in file:
             raise RequestError('File not accessible anymore')
 
-        file_url = file['g']
-        file_size = file['s']
-        attribs_bytes = base64_url_decode(file['at'])
-        attribs = decrypt_attr(attribs_bytes, k_decrypted)
-        file_name: str = attribs['n']
         self._queue_size = 1
-
         output_path = self._dest_base / file_name
         file_url_https = ensure_scheme_https(file_url)
 
@@ -521,11 +533,11 @@ class Mega:
         size_msg = '0.00 / ' if touch else ''
         Log.info(f'Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{file_size / Mem.MB:.2f} MB)...')
 
-        output_path.parent.mkdir(parents=True, exist_ok=True)
         chunk_generator = make_chunk_generator(file_size)
         chunk_decryptor = make_chunk_decryptor(iv, k_decrypted, meta_mac)
         _ = next(chunk_decryptor)  # Init chunk decryptor
 
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         async with async_open(output_path, 'wb') as output_file:
             if not touch:
                 bytes_written = 0
@@ -648,7 +660,7 @@ class Mega:
         return shared_keys
 
     @staticmethod
-    async def _build_file_system(node_map: dict[str, File | Folder], root_ids: list[str]) -> dict[pathlib.PurePosixPath, File | Folder]:
+    async def _build_file_system(node_map: FilesMapping, root_ids: list[str]) -> FileSystemMapping:
         async def build_path_tree(parent_item_id: str, parent_item_path: pathlib.PurePosixPath) -> None:
             for child_item in parent_mapping.get(parent_item_id, []):
                 item_name: str = child_item['attributes'].get('n')
@@ -658,7 +670,7 @@ class Mega:
                     if child_item['t'] == NodeType.FOLDER:
                         await build_path_tree(child_item['h'], item_path)
 
-        path_mapping: dict[pathlib.PurePosixPath, File | Folder] = {}
+        path_mapping: FileSystemMapping = {}
         parent_mapping: dict[str, list[File | Folder]] = {}  # parent_id -> child nodes
 
         for file_or_folder_node in node_map.values():
@@ -674,7 +686,7 @@ class Mega:
             path_mapping[root_path] = root_node
             await build_path_tree(root_id, root_path)
 
-        sorted_mapping: dict[pathlib.PurePosixPath, File | Folder] = {k: path_mapping[k] for k in sorted(path_mapping)}
+        sorted_mapping: FileSystemMapping = {k: path_mapping[k] for k in sorted(path_mapping)}
         return sorted_mapping
 
 #

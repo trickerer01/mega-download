@@ -29,6 +29,7 @@ class BaseConfig:
         self.filter_filesize: NumRange | None = None
         self.filter_filename: str | None = None
         self.dump_links: bool | None = None
+        self.dump_structure: bool | None = None
         self.links_file: pathlib.Path | None = None
         self.links: list[str] | None = None
         self.max_jobs: int | None = None

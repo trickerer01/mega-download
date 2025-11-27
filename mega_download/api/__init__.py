@@ -1,8 +1,8 @@
 from .api import Mega
-from .containers import DownloadParams, DownloadParamsDump, File, Folder
+from .containers import DownloadParams, DownloadParamsDump, File, FileSystemDump, Folder
 from .defs import SITE_PRIMARY, DownloadMode, DownloadResult, Mem, NumRange
 from .exceptions import MegaNZError
-from .hooks import DownloadParamsCallback
+from .hooks import DownloadParamsCallback, FileSystemCallback
 from .options import MegaOptions
 
 __all__ = (
@@ -13,6 +13,8 @@ __all__ = (
     'DownloadParamsDump',
     'DownloadResult',
     'File',
+    'FileSystemCallback',
+    'FileSystemDump',
     'Folder',
     'Mega',
     'MegaNZError',

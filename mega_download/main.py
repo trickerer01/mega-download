@@ -12,12 +12,12 @@ from asyncio import get_running_loop, run, sleep
 from collections.abc import Iterable, Sequence
 from contextlib import AsyncExitStack
 
-from .api import DownloadMode, DownloadParamsCallback, Mega, MegaNZError, MegaOptions
+from .api import DownloadMode, DownloadParamsCallback, FileSystemCallback, Mega, MegaNZError, MegaOptions
 from .cmdargs import HelpPrintExitException, prepare_arglist
 from .config import Config
 from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR, SCAN_CANCEL_KEYCOUNT, SCAN_CANCEL_KEYSTROKE
 from .filters import FileNameFilter, FileSizeFilter
-from .hooks import create_before_download_callbacks
+from .hooks import create_callbacks
 from .input import wait_for_key
 from .logger import Log
 from .version import APP_NAME, APP_VERSION
@@ -36,7 +36,10 @@ def at_startup() -> None:
     Log.debug(f'Python {sys.version}\n{APP_NAME} ver {APP_VERSION}\nCommand-line args: {" ".join(sys.argv)}')
 
 
-def make_mega_options(before_download_callbacks: Iterable[DownloadParamsCallback]) -> MegaOptions:
+def make_mega_options(
+    before_download_callbacks: Iterable[DownloadParamsCallback],
+    after_scan_callbacks: Iterable[FileSystemCallback],
+) -> MegaOptions:
     options = MegaOptions(
         dest_base=Config.dest_base,
         retries=Config.retries,
@@ -51,7 +54,8 @@ def make_mega_options(before_download_callbacks: Iterable[DownloadParamsCallback
             *((FileNameFilter(Config.filter_filename),) if Config.filter_filename else ()),
         ),
         download_mode=DownloadMode(Config.download_mode),
-        hooks_before_download=(*before_download_callbacks,),
+        hooks_before_download=tuple(before_download_callbacks),
+        hooks_after_scan=tuple(after_scan_callbacks),
         logger=Log,
     )
     return options
@@ -64,13 +68,14 @@ async def main(args: Sequence[str]) -> int:
         return 0
 
     try:
-        before_download_callbacks = create_before_download_callbacks()
-        mega = Mega(make_mega_options(before_download_callbacks))
+        before_download_callbacks, after_scan_callbacks = create_callbacks()
+        mega = Mega(make_mega_options(before_download_callbacks, after_scan_callbacks))
         abort_waiter = get_running_loop().create_task(wait_for_key(SCAN_CANCEL_KEYSTROKE, SCAN_CANCEL_KEYCOUNT, mega.abort))
 
         async with AsyncExitStack() as ctx:
             await ctx.enter_async_context(mega)
             [await ctx.enter_async_context(_) for _ in before_download_callbacks]
+            [await ctx.enter_async_context(_) for _ in after_scan_callbacks]
             results = [await mega.download_url(_) for _ in Config.links]
 
         abort_waiter.cancel()
