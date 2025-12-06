@@ -265,22 +265,21 @@ class Mega:
             b64_csid = resp.get('csid', 'UNK')
             raise LoginError(f'Fatal: login response does not contain \'tsid\' key. csid: \'{b64_csid}\'!')
 
-    async def _get_nodes(self) -> list[File | Folder]:
-        folder: Folder = await self.query_api({'a': 'f', 'c': 1, 'r': 1})
-        self._shared_keys = self._init_shared_keys(folder, self._master_key)
+    async def _process_folder_nodes(self, folder: Folder) -> list[File | Folder]:
         nodes: list[File | Folder] = []
-        for _, node in enumerate(folder['f'], 1):
+        for node in folder['f']:
             pnode = self._process_node(node)
             nodes.append(pnode)
         return nodes
 
+    async def _get_nodes_in_folder(self) -> list[File | Folder]:
+        folder: Folder = await self.query_api({'a': 'f', 'c': 1, 'r': 1})
+        self._shared_keys = self._init_shared_keys(folder, self._master_key)
+        return await self._process_folder_nodes(folder)
+
     async def _get_nodes_in_shared_folder(self, folder_id: str) -> list[File | Folder]:
         folder: Folder = await self.query_api({'a': 'f', 'c': 1, 'ca': 1, 'r': 1}, add_params={'n': folder_id})
-        nodes: list[File | Folder] = []
-        for _, node in enumerate(folder['f'], 1):
-            pnode = self._process_node(node)
-            nodes.append(pnode)
-        return nodes
+        return await self._process_folder_nodes(folder)
 
     async def _prepare_nodes(self, folder_id: str, shared_key: Sequence[int]) -> list[File | Folder]:
         nodes: list[File | Folder] = []

@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'mega-download'
-version = '0.4.39'
+version = '0.4.40'
 authors = [
     {name = 'trickerer01'},
 ]
@@ -55,7 +55,7 @@ Documentation = 'https://github.com/trickerer01/mega-download#readme'
 Tracker = 'https://github.com/trickerer01/mega-download/issues'
 
 [project.scripts]
-main_sync = 'mega_download:main'
+mega_download = 'mega_download:main'
 
 [tool.ruff]
 line-length = 140

@@ -139,9 +139,7 @@ def parse_arglist(args: Sequence[str]) -> Namespace:
     par_cmd.add_argument(dest='links', nargs=ONE_OR_MORE, help=HELP_ARG_LINKS)
     par_cmd.add_argument('-l', '--dump-links', action=ACTION_STORE_TRUE, help=HELP_ARG_DUMP_LINKS)
     par_cmd.add_argument('-s', '--dump-structure', action=ACTION_STORE_TRUE, help=HELP_ARG_DUMP_STRUCTURE)
-
     [add_common_args(_) for _ in (par_cmd, par_file)]
-
     return execute_parser(parser, par_cmd, args)
 
 
