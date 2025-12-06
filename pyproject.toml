@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'mega-download'
-version = '0.4.41'
+version = '0.4.42'
 authors = [
     {name = 'trickerer01'},
 ]
@@ -56,6 +56,12 @@ Tracker = 'https://github.com/trickerer01/mega-download/issues'
 
 [project.scripts]
 mega-download = 'mega_download:main'
+
+[tool.setuptools]
+py-modules = ['mega_download']
+
+[tool.setuptools.packages]
+find = {include = ['mega_download*']}
 
 [tool.ruff]
 line-length = 140
@@ -135,9 +141,6 @@ select = [
     'PLW',    # Pylint Warning
     'RUF',    # Ruff-specific rules
 ]
-
-[tool.setuptools]
-py-modules = ['mega_download', 'tests']
 
 [tool.ruff.lint.per-file-ignores]
 'mega_download/main.py' = [
