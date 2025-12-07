@@ -6,12 +6,14 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 #
 
-if False is True:  # for hinting only
-    import pathlib  # noqa: I001
-    from aiohttp import ClientTimeout  # noqa: I001
-    from .defs import NumRange
+import pathlib
+from typing import Protocol
 
-__all__ = ('Config',)
+from aiohttp import ClientTimeout
+
+from .defs import NumRange
+
+__all__ = ('BaseConfigContainer', 'Config')
 
 
 class BaseConfig:
@@ -48,6 +50,26 @@ class BaseConfig:
 
     def _reset(self) -> None:
         self.__init__()  # noqa: PLC2801
+
+
+class BaseConfigContainer(Protocol):
+    filter_filesize: NumRange | None
+    filter_filename: str | None
+    dump_links: bool | None
+    dump_structure: bool | None
+    links_file: pathlib.Path | None
+    links: list[str] | None
+    max_jobs: int | None
+    dest_base: pathlib.Path | None
+    proxy: str | None
+    download_mode: str | None
+    logging_flags: int
+    nocolors: bool | None
+    timeout: ClientTimeout | None
+    retries: int
+    extra_headers: list[tuple[str, str]] | None
+    extra_cookies: list[tuple[str, str]] | None
+    nodelay: bool
 
 
 Config: BaseConfig = BaseConfig()

@@ -7,22 +7,32 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 
 import itertools
+import pathlib
 import sys
 from asyncio import get_running_loop, run, sleep
 from collections.abc import Iterable, Sequence
 from contextlib import AsyncExitStack
 
+from aiohttp import ClientTimeout
+
 from .api import DownloadMode, DownloadParamsCallback, FileSystemCallback, Mega, MegaNZError, MegaOptions
 from .cmdargs import HelpPrintExitException, prepare_arglist
-from .config import Config
-from .defs import MIN_PYTHON_VERSION, MIN_PYTHON_VERSION_STR, SCAN_CANCEL_KEYCOUNT, SCAN_CANCEL_KEYSTROKE
+from .config import BaseConfigContainer, Config
+from .defs import (
+    CONNECT_TIMEOUT_SOCKET_READ,
+    MIN_PYTHON_VERSION,
+    MIN_PYTHON_VERSION_STR,
+    SCAN_CANCEL_KEYCOUNT,
+    SCAN_CANCEL_KEYSTROKE,
+    LoggingFlags,
+)
 from .filters import FileNameFilter, FileSizeFilter
 from .hooks import create_callbacks
 from .input import wait_for_key
 from .logger import Log
 from .version import APP_NAME, APP_VERSION
 
-__all__ = ('main_async', 'main_sync')
+__all__ = ('MegaDownloader', 'main_async', 'main_sync')
 
 
 def at_startup() -> None:
@@ -37,8 +47,8 @@ def at_startup() -> None:
 
 
 def make_mega_options(
-    before_download_callbacks: Iterable[DownloadParamsCallback],
-    after_scan_callbacks: Iterable[FileSystemCallback],
+    before_download_callbacks: Iterable[DownloadParamsCallback] = (),
+    after_scan_callbacks: Iterable[FileSystemCallback] = (),
 ) -> MegaOptions:
     options = MegaOptions(
         dest_base=Config.dest_base,
@@ -61,13 +71,31 @@ def make_mega_options(
     return options
 
 
-async def main(args: Sequence[str]) -> int:
-    try:
-        prepare_arglist(args)
-    except HelpPrintExitException:
-        return 0
+class MegaDownloader:
+    _client_timeout_default = ClientTimeout(total=None, connect=20, sock_connect=20, sock_read=float(CONNECT_TIMEOUT_SOCKET_READ))
 
-    try:
+    def __init__(self, links: list[str], base_config: BaseConfigContainer) -> None:
+        self._links = links
+        self._config = base_config
+
+    async def run(self) -> list[pathlib.Path]:
+        Config.links = self._links
+        Config.max_jobs = self._config.max_jobs or 1
+        Config.proxy = self._config.proxy or ''
+        Config.timeout = self._config.timeout or MegaDownloader._client_timeout_default
+        Config.retries = self._config.retries or 0
+        Config.extra_headers = self._config.extra_headers or []
+        Config.extra_cookies = self._config.extra_cookies or []
+        Config.download_mode = self._config.download_mode or 'full'
+        Config.logging_flags = self._config.logging_flags or LoggingFlags.INFO.value
+        Config.filter_filesize = self._config.filter_filesize
+        Config.filter_filename = self._config.filter_filename
+        Config.nocolors = self._config.nocolors or False
+        Config.nodelay = self._config.nodelay or False
+
+        if not Config.links:
+            Log.error('Nothing to process, aborted')
+            return []
         before_download_callbacks, after_scan_callbacks = create_callbacks()
         mega = Mega(make_mega_options(before_download_callbacks, after_scan_callbacks))
         abort_waiter = get_running_loop().create_task(wait_for_key(SCAN_CANCEL_KEYSTROKE, SCAN_CANCEL_KEYCOUNT, mega.abort))
@@ -77,11 +105,22 @@ async def main(args: Sequence[str]) -> int:
             [await ctx.enter_async_context(_) for _ in before_download_callbacks]
             [await ctx.enter_async_context(_) for _ in after_scan_callbacks]
             results = [await mega.download_url(_) for _ in Config.links]
-
         abort_waiter.cancel()
         await abort_waiter
 
-        Log.info('\n'.join(('\n', *(_.name for _ in itertools.chain(*results)))) or '\nNothing')
+        return list(itertools.chain(*results))
+
+
+async def main(args: Sequence[str]) -> int:
+    try:
+        prepare_arglist(args)
+    except HelpPrintExitException:
+        return 0
+
+    try:
+        mega = MegaDownloader(Config.links, Config)
+        results = await mega.run()
+        Log.info('\n'.join(('\n', *(_.name for _ in results))) or '\nNothing')
         return 0
     except MegaNZError:
         import traceback
