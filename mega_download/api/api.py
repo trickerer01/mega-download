@@ -12,14 +12,23 @@ import json
 import pathlib
 import random
 import re
+import sys
 import warnings
-from asyncio import gather, sleep
+from asyncio import Semaphore, create_task, gather, sleep
 from collections.abc import Sequence
 from inspect import get_annotations
 from typing import Literal, TypeAlias
 
 from aiofile import async_open
-from aiohttp import ClientConnectorError, ClientResponse, ClientResponseError, ClientSession, ClientTimeout, TCPConnector
+from aiohttp import (
+    ClientConnectorError,
+    ClientPayloadError,
+    ClientResponse,
+    ClientResponseError,
+    ClientSession,
+    ClientTimeout,
+    TCPConnector,
+)
 from aiohttp_socks import ProxyConnector
 
 from mega_download.util import UAManager, compose_link_v2, ensure_scheme_https
@@ -180,10 +189,9 @@ class Mega:
         data_input = [data_input]
         add_params: dict[str, str] = add_params or {}
 
-        retries = 0
-        response: ClientResponse | None = None
-        while retries <= self._retries:
-            response = None
+        try_num = 0
+        while try_num <= self._retries:
+            r: ClientResponse | None = None
             try:
                 params: dict[str, int | str] = {'id': self._sequence_num} | add_params
                 self._sequence_num = (self._sequence_num + 1) % UINT32_MAX
@@ -192,18 +200,18 @@ class Mega:
                     params['sid'] = self._sid
 
                 Log.trace(f'Sending API request: POST, params: {params!s}, input: {data_input!s}')
-                response = await self._wrap_request('POST', SITE_API, params=params, json=data_input)
+                r = await self._wrap_request('POST', SITE_API, params=params, json=data_input)
 
-                hashcash_challenge: str = response.headers.get('X-Hashcash')
+                hashcash_challenge: str = r.headers.get('X-Hashcash')
                 if hashcash_challenge:
                     hashcash_token = make_hashcash_token(hashcash_challenge)
                     hashcash_headers = {'X-Hashcash': hashcash_token}
                     Log.info(f'Solving xhashcash login challenge..., Body: {hashcash_challenge} -> {hashcash_token}')
-                    response = await self._wrap_request('POST', SITE_API, params=params, json=data_input, headers=hashcash_headers)
-                    if hashcash_challenge := response.headers.get('X-Hashcash'):
+                    r = await self._wrap_request('POST', SITE_API, params=params, json=data_input, headers=hashcash_headers)
+                    if hashcash_challenge := r.headers.get('X-Hashcash'):
                         raise RequestError(f'Login failed. Mega requested a proof of work with xhashcash: {hashcash_challenge}')
 
-                jresp: list[int] | list[str] | int = await response.json()
+                jresp: list[int] | list[str] | int = await r.json()
 
                 if isinstance(jresp, int):
                     return handle_int_resp(jresp)
@@ -217,27 +225,22 @@ class Mega:
                 else:
                     raise RequestError(f'Unknown response: {jresp!r}')
             except Exception as e:
-                if response is not None and '404.' in str(response.url):
-                    Log.error('ERROR: 404')
-                    assert False
-                else:
-                    Log.error(f'[{retries + 1:d}] fetch_html exception status '
-                              f'{f"{response.status:d}" if response is not None else "???"}: '
-                              f'\'{e.message if isinstance(e, ClientResponseError) else str(e)}\'')
+                Log.error(f'query_api: {sys.exc_info()[0]}: {sys.exc_info()[1]}')
                 if isinstance(e, RequestError):
                     raise
-                if not isinstance(e, ClientConnectorError):
-                    retries += 1
+                if not isinstance(e, (ClientPayloadError, ClientResponseError, ClientConnectorError)):
+                    try_num += 1
+                    Log.error(f'query_api: error #{try_num:d}...')
+                if r is not None and not r.closed:
+                    r.close()
                 if self._aborted:
                     return 0
-                if retries <= self._retries:
+                if try_num <= self._retries:
                     await sleep(random.uniform(*CONNECT_RETRY_DELAY))
                 continue
 
-        if retries > self._retries:
+        if try_num > self._retries:
             Log.error('Unable to connect. Aborting')
-        elif response is None:
-            Log.error('ERROR: Failed to receive any data')
         raise ConnectionError
 
     async def _login(self) -> None:
@@ -452,6 +455,11 @@ class Mega:
         self._queue_size = len(proc_queue)
         Log.info(f'Saving {self._queue_size:d} / {len(files):d} files...')
 
+        async def download_folder_file_wrapper(index: int, file: File, file_path: pathlib.Path) -> pathlib.Path:
+            async with semaphore:
+                return await self._download_folder_file(index, file, file_path)
+
+        semaphore = Semaphore(self._max_jobs)
         tasks = []
         idx = 0
         for path, file_or_folder in ftree.items():
@@ -460,7 +468,7 @@ class Mega:
             if path not in proc_queue:
                 Log.trace(f'Skipping excluded node {file_or_folder!s} ({path})...')
                 continue
-            tasks.append(self._download_folder_file(idx, file_or_folder, pathlib.Path(path)))
+            tasks.append(create_task(download_folder_file_wrapper(idx, file_or_folder, pathlib.Path(path))))
             idx += 1
 
         results: tuple[pathlib.Path | BaseException, ...] = await gather(*tasks)

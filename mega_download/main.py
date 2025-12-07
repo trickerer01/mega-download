@@ -19,7 +19,10 @@ from .api import DownloadMode, DownloadParamsCallback, FileSystemCallback, Mega,
 from .cmdargs import HelpPrintExitException, prepare_arglist
 from .config import BaseConfigContainer, Config
 from .defs import (
+    CONNECT_RETRIES_BASE,
+    CONNECT_TIMEOUT_BASE,
     CONNECT_TIMEOUT_SOCKET_READ,
+    MAX_JOBS_DEFAULT,
     MIN_PYTHON_VERSION,
     MIN_PYTHON_VERSION_STR,
     SCAN_CANCEL_KEYCOUNT,
@@ -72,21 +75,24 @@ def make_mega_options(
 
 
 class MegaDownloader:
-    _client_timeout_default = ClientTimeout(total=None, connect=20, sock_connect=20, sock_read=float(CONNECT_TIMEOUT_SOCKET_READ))
+    _client_timeout_default = ClientTimeout(
+        total=None, connect=CONNECT_TIMEOUT_BASE, sock_connect=CONNECT_TIMEOUT_BASE, sock_read=float(CONNECT_TIMEOUT_SOCKET_READ),
+    )
 
     def __init__(self, links: list[str], base_config: BaseConfigContainer) -> None:
         self._links = links
         self._config = base_config
 
     async def run(self) -> list[pathlib.Path]:
-        Config.links = self._links
-        Config.max_jobs = self._config.max_jobs or 1
+        Config.links = self._links or []
+        Config.dest_base = self._config.dest_base
+        Config.max_jobs = self._config.max_jobs or MAX_JOBS_DEFAULT
         Config.proxy = self._config.proxy or ''
         Config.timeout = self._config.timeout or MegaDownloader._client_timeout_default
-        Config.retries = self._config.retries or 0
+        Config.retries = self._config.retries or CONNECT_RETRIES_BASE
         Config.extra_headers = self._config.extra_headers or []
         Config.extra_cookies = self._config.extra_cookies or []
-        Config.download_mode = self._config.download_mode or 'full'
+        Config.download_mode = self._config.download_mode or DownloadMode.FULL.value
         Config.logging_flags = self._config.logging_flags or LoggingFlags.INFO.value
         Config.filter_filesize = self._config.filter_filesize
         Config.filter_filename = self._config.filter_filename
