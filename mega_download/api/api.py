@@ -111,7 +111,6 @@ class Mega:
         assert next(reversed(self._dest_base.parents)).is_dir()
         assert isinstance(self._download_mode, DownloadMode)
         assert self._max_jobs > 0
-        _ = self._download_mode
 
     async def __aenter__(self) -> Mega:
         return self
