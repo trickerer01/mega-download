@@ -39,6 +39,7 @@ from .logger import Log
 from .validators import (
     log_level,
     positive_int,
+    valid_ext,
     valid_file_path,
     valid_folder_path,
     valid_kwarg,
@@ -121,7 +122,8 @@ def add_common_args(par: ArgumentParser) -> None:
     par.add_argument('-h', '--header', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_HEADER, type=valid_kwarg)
     par.add_argument('-c', '--cookie', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_COOKIE, type=valid_kwarg)
     par.add_argument('-fs', '--filter-filesize', metavar='#min-max', default=None, help='', type=valid_range)
-    par.add_argument('-fn', '--filter-filename', metavar='#pattern', default=None, help=HELP_ARG_FILTERS, type=valid_pattern)
+    par.add_argument('-fn', '--filter-filename', metavar='#pattern', default=None, help='', type=valid_pattern)
+    par.add_argument('-fe', '--filter-extensions', metavar='#.EXT', action=ACTION_APPEND, help=HELP_ARG_FILTERS, type=valid_ext)
     par.add_argument('-d', '--download-mode', default=DM_DEFAULT, help=HELP_ARG_DMMODE, choices=DOWNLOAD_MODES)
 
 

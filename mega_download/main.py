@@ -29,7 +29,7 @@ from .defs import (
     SCAN_CANCEL_KEYSTROKE,
     LoggingFlags,
 )
-from .filters import FileNameFilter, FileSizeFilter
+from .filters import FileExtFilter, FileNameFilter, FileSizeFilter
 from .hooks import create_callbacks
 from .input import wait_for_key
 from .logger import Log
@@ -65,6 +65,7 @@ def make_mega_options(
         filters=(
             *((FileSizeFilter(Config.filter_filesize),) if Config.filter_filesize else ()),
             *((FileNameFilter(Config.filter_filename),) if Config.filter_filename else ()),
+            *((FileExtFilter(Config.filter_extensions),) if Config.filter_extensions else ()),
         ),
         download_mode=DownloadMode(Config.download_mode),
         hooks_before_download=tuple(before_download_callbacks),
@@ -96,6 +97,7 @@ class MegaDownloader:
         Config.logging_flags = self._config.logging_flags or LoggingFlags.INFO.value
         Config.filter_filesize = self._config.filter_filesize
         Config.filter_filename = self._config.filter_filename
+        Config.filter_extensions = self._config.filter_extensions
         Config.nocolors = self._config.nocolors or False
         Config.nodelay = self._config.nodelay or False
 

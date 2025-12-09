@@ -270,7 +270,7 @@ class Mega:
     async def _process_folder_nodes(self, folder: Folder) -> list[File | Folder]:
         nodes: list[File | Folder] = []
         for node in folder['f']:
-            pnode = self._process_node(node)
+            pnode = self._process_folder_node(node)
             nodes.append(pnode)
         return nodes
 
@@ -283,7 +283,7 @@ class Mega:
         folder: Folder = await self.query_api({'a': 'f', 'c': 1, 'ca': 1, 'r': 1}, add_params={'n': folder_id})
         return await self._process_folder_nodes(folder)
 
-    async def _prepare_nodes(self, folder_id: str, shared_key: Sequence[int]) -> list[File | Folder]:
+    async def _prepare_folder_nodes(self, folder_id: str, shared_key: Sequence[int]) -> list[File | Folder]:
         nodes: list[File | Folder] = []
         for file_or_folder in await self._get_nodes_in_shared_folder(folder_id):
             encrypted_key = base64_to_ints(file_or_folder['k'].split(':')[1])
@@ -306,7 +306,7 @@ class Mega:
             nodes.append(file_or_folder)
         return nodes
 
-    def _process_node(self, file_or_folder: File | Folder) -> File | Folder:
+    def _process_folder_node(self, file_or_folder: File | Folder) -> File | Folder:
         Log.trace(f'Node {file_or_folder["p"]}/{file_or_folder["h"]}...')
         if file_or_folder['t'] == NodeType.FILE or file_or_folder['t'] == NodeType.FOLDER:
             keys = dict(tuple[str, str](keypart.split(':', 1)) for keypart in file_or_folder['k'].split('/') if ':' in keypart)
@@ -440,7 +440,7 @@ class Mega:
 
     async def _download_folder(self) -> tuple[pathlib.Path, ...]:
         fk_arr = base64_to_ints(self._parsed.key_b64)
-        fof_nodes: FilesMapping = {node['h']: node for node in await self._prepare_nodes(self._parsed.folder_id, fk_arr)}
+        fof_nodes: FilesMapping = {node['h']: node for node in await self._prepare_folder_nodes(self._parsed.folder_id, fk_arr)}
         Log.trace(f'Folder {self._parsed.folder_id} nodes: {fof_nodes!s}')
 
         root_id: str = next(iter(fof_nodes))
@@ -450,7 +450,7 @@ class Mega:
 
         self._after_scan(root_id, ftree)
 
-        proc_queue: set[pathlib.PurePosixPath] = self._filter_files(files)
+        proc_queue: set[pathlib.PurePosixPath] = self._filter_folder_files(files)
         self._queue_size = len(proc_queue)
         Log.info(f'Saving {self._queue_size:d} / {len(files):d} files...')
 
@@ -482,8 +482,9 @@ class Mega:
         file: File = await self.query_api({'a': 'g', 'g': 1, 'p': self._parsed.file_id})
         file_url = file['g']
         file_size = file['s']
-        attribs = decrypt_attr(base64_url_decode(file['at']), k_decrypted)
-        file_name: str = attribs['n']
+        attributes = decrypt_attr(base64_url_decode(file['at']), k_decrypted)
+        file['attributes'] = attributes
+        file_name: str = attributes['n']
         ftree: FileSystemMapping = {pathlib.PurePosixPath(file_name): file}
 
         self._after_scan(file['fh'], ftree)
@@ -574,7 +575,7 @@ class Mega:
         Log.error(f'FAILED to download {output_path.name}!')
         return pathlib.Path()
 
-    def _filter_files(self, ftree: dict[pathlib.PurePosixPath, File]) -> set[pathlib.PurePosixPath]:
+    def _filter_folder_files(self, ftree: dict[pathlib.PurePosixPath, File]) -> set[pathlib.PurePosixPath]:
         proc_queue = set[pathlib.PurePosixPath]()
         file_idx = 0
         enqueued_idx = 0

@@ -30,6 +30,7 @@ class BaseConfig:
         # new
         self.filter_filesize: NumRange | None = None
         self.filter_filename: str | None = None
+        self.filter_extensions: list[str] | None = None
         self.dump_links: bool | None = None
         self.dump_structure: bool | None = None
         self.links_file: pathlib.Path | None = None
@@ -55,6 +56,7 @@ class BaseConfig:
 class BaseConfigContainer(Protocol):
     filter_filesize: NumRange | None
     filter_filename: str | None
+    filter_extensions: list[str] | None
     dump_links: bool | None
     dump_structure: bool | None
     links_file: pathlib.Path | None

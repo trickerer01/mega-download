@@ -44,6 +44,21 @@ class FileNameFilter:
     def __str__(self) -> str:
         return f'{self.__class__.__name__}<{self._regex.pattern!s}>'
 
+
+class FileExtFilter:
+    """
+    Filters files by file extension
+    """
+    def __init__(self, extensions: list[str]) -> None:
+        self._extensions = extensions
+
+    def filters_out(self, file: File) -> bool:
+        file_name = file['attributes']['n']
+        return not any(file_name.endswith(_) for _ in self._extensions)
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}<{self._extensions!s}>'
+
 #
 #
 #########################################

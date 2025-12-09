@@ -7,6 +7,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 #
 
 import pathlib
+import re
 from argparse import ArgumentError
 from ipaddress import IPv4Address
 
@@ -21,6 +22,8 @@ from .defs import (
 )
 from .logger import Log
 from .util import build_regex_from_pattern
+
+re_ext = re.compile(r'^\.\w{2,5}$')
 
 
 def valid_kwarg(kwarg: str) -> tuple[str, str]:
@@ -147,6 +150,14 @@ def valid_pattern(pattern_str: str) -> str:
     try:
         _ = build_regex_from_pattern(pattern_str)
         return pattern_str
+    except Exception:
+        raise ArgumentError
+
+
+def valid_ext(ext_str: str) -> str:
+    try:
+        assert re_ext.fullmatch(ext_str)
+        return ext_str.lower()
     except Exception:
         raise ArgumentError
 
