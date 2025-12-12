@@ -74,7 +74,7 @@ __all__ = ('Mega',)
 
 APIResponse: TypeAlias = File | Folder | UserInfo | str | int
 
-re_mega_file_id_v1 = re.compile(r'/#!(.*)')
+re_mega_file_id_v1 = re.compile(r'\W(\w{8})\W')
 re_mega_file_id_v2 = re.compile(r'\W(\w{8})\W')
 re_mega_folder_file_id = re.compile(r'\W\w{4}\W(\w{8})')
 
@@ -647,7 +647,7 @@ class Mega:
                 fmatch_v1 = re_mega_file_id_v1.search(url)
                 assert fmatch_v1, f'Unable to parse url v1: file id not found in \'{url}\'!'
                 file_id = fmatch_v1.group(1)
-                shared_key = file_id  # yes
+                shared_key = url[fmatch_v1.end():]
             else:
                 raise ValueError(f'Not a valid file URL {url}')
         return ParsedUrl(folder_id=root_folder_id, file_id=file_id, key_b64=shared_key)
