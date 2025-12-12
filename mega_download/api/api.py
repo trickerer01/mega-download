@@ -99,6 +99,7 @@ class Mega:
         self._max_jobs = options['max_jobs']
         self._timeout: ClientTimeout = options['timeout']
         self._nodelay: bool = options['nodelay']
+        self._noconfirm: bool = options['noconfirm']
         self._proxy: str = options['proxy']
         self._extra_headers: list[tuple[str, str]] = options['extra_headers']
         self._extra_cookies: list[tuple[str, str]] = options['extra_cookies']
@@ -225,9 +226,7 @@ class Mega:
                     raise RequestError(f'Unknown response: {jresp!r}')
             except Exception as e:
                 Log.error(f'query_api: {sys.exc_info()[0]}: {sys.exc_info()[1]}')
-                if isinstance(e, RequestError):
-                    raise
-                if not isinstance(e, (ClientPayloadError, ClientResponseError, ClientConnectorError)):
+                if (r is None or r.status != 403) and not isinstance(e, (ClientPayloadError, ClientResponseError, ClientConnectorError)):
                     try_num += 1
                     Log.error(f'query_api: error #{try_num:d}...')
                 if r is not None and not r.closed:
@@ -238,8 +237,7 @@ class Mega:
                     await sleep(random.uniform(*CONNECT_RETRY_DELAY))
                 continue
 
-        if try_num > self._retries:
-            Log.error('Unable to connect. Aborting')
+        Log.error('Unable to connect. Aborting')
         raise ConnectionError
 
     async def _login(self) -> None:
@@ -515,7 +513,7 @@ class Mega:
         num = params['index'] + 1
         direct_file_url = params['direct_file_url']
         output_path = params['output_path']
-        file_size = params['file_size']
+        expected_size = params['file_size']
         iv = params['iv']
         meta_mac = params['meta_mac']
         k_decrypted = params['k_decrypted']
@@ -525,8 +523,11 @@ class Mega:
         if output_path.exists():
             existing_size = output_path.stat().st_size
             if not (touch and existing_size == 0):
-                size_match_msg = f'({"COMPLETE" if existing_size == file_size else "MISMATCH!"})'
+                size_match_msg = f'({"COMPLETE" if existing_size == expected_size else "MISMATCH!"})'
                 exists_msg = f'{output_path} already exists, size: {existing_size / Mem.MB:.2f} MB {size_match_msg}'
+                if self._noconfirm:
+                    Log.info(exists_msg)
+                    return output_path
                 ans = 'q'
                 while ans not in 'yYnN01':
                     ans = input(f'{exists_msg}. Overwrite? [y/N]\n')
@@ -538,23 +539,23 @@ class Mega:
 
         touch_msg = ' <touch>' if touch else ''
         size_msg = '0.00 / ' if touch else ''
-        Log.info(f'Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{file_size / Mem.MB:.2f} MB)...')
+        Log.info(f'Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{expected_size / Mem.MB:.2f} MB)...')
 
-        chunk_generator = make_chunk_generator(file_size)
+        chunk_generator = make_chunk_generator(expected_size)
         chunk_decryptor = make_chunk_decryptor(iv, k_decrypted, meta_mac)
         _ = next(chunk_decryptor)  # Init chunk decryptor
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        bytes_written = 0
         async with async_open(output_path, 'wb') as output_file:
             if not touch:
-                bytes_written = 0
-                async with await self._wrap_request('GET', direct_file_url) as response:
+                async with await self._wrap_request('GET', direct_file_url) as r:
                     for i, chunk in enumerate(chunk_generator):
-                        raw_chunk: bytes = await response.content.readexactly(chunk.size)
+                        raw_chunk: bytes = await r.content.readexactly(chunk.size)
                         decrypted_chunk: bytes = chunk_decryptor.send(raw_chunk)
                         actual_size = len(decrypted_chunk)
                         bytes_written += actual_size
-                        dwn_progress_str = f'+{actual_size:d} ({bytes_written / Mem.MB:.2f} / {file_size / Mem.MB:.2f} MB)'
+                        dwn_progress_str = f'+{actual_size:d} ({bytes_written / Mem.MB:.2f} / {expected_size / Mem.MB:.2f} MB)'
                         Log.info(f'[{num:d} / {self._queue_size:d}] {output_path.name} chunk {i + 1:d}: {dwn_progress_str}...')
                         await output_file.write(decrypted_chunk)
         try:
@@ -569,7 +570,7 @@ class Mega:
 
         if output_path.exists():
             total_size = output_path.stat().st_size
-            Log.info(f'{output_path.name} {"" if total_size == file_size else "NOT "}completed ({total_size / Mem.MB:.2f} MB)')
+            Log.info(f'{output_path.name} {"" if total_size == expected_size else "NOT "}completed ({total_size / Mem.MB:.2f} MB)')
             return output_path
 
         Log.error(f'FAILED to download {output_path.name}!')
@@ -598,7 +599,7 @@ class Mega:
                 do_append = True
             else:
                 file_size = file['s']
-                ans = 'q'
+                ans = 'y' if self._noconfirm else 'q'
                 while ans not in 'nNyY10':
                     ans = input(f'[{file_idx:d}] Download {qpath.name} ({file_size / Mem.MB:.2f} MB)? [Y/n]\n')
                 do_append = ans in 'yY1'

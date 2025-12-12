@@ -24,6 +24,7 @@ class MegaOptions(TypedDict):
     max_jobs: int
     timeout: ClientTimeout
     nodelay: bool
+    noconfirm: bool
     proxy: str
     extra_headers: list[tuple[str, str]]
     extra_cookies: list[tuple[str, str]]

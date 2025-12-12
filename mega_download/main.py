@@ -59,6 +59,7 @@ def make_mega_options(
         max_jobs=Config.max_jobs,
         timeout=Config.timeout,
         nodelay=Config.nodelay,
+        noconfirm=Config.noconfirm,
         proxy=Config.proxy,
         extra_headers=Config.extra_headers,
         extra_cookies=Config.extra_cookies,
@@ -100,6 +101,7 @@ class MegaDownloader:
         Config.filter_extensions = self._config.filter_extensions
         Config.nocolors = self._config.nocolors or False
         Config.nodelay = self._config.nodelay or False
+        Config.noconfirm = getattr(self._config, 'noconfirm', True)
 
         if not Config.links:
             Log.error('Nothing to process, aborted')
