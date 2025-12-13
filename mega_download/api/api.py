@@ -631,11 +631,12 @@ class Mega:
                     ffmatch = re_mega_folder_file_id.search(url)
                     assert ffmatch, f'Unable to parse folder url: folder file id not found in \'{url}\'!'
                     file_id = ffmatch.group(1)
+                root_folder_id, shared_key = tuple(parts.split('#', 1))
             elif has_folder2:
                 parts = url.split(folder_lookup2, 1)[1]
+                root_folder_id, shared_key = tuple(parts.split('!', 1))
             else:
                 raise ValueError(f'Not a valid folder URL {url}')
-            root_folder_id, shared_key = tuple(parts.split('#', 1))
         elif has_file1 or has_file2:
             if has_file1:
                 # V2 URL structure
