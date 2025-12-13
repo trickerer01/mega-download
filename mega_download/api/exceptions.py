@@ -18,6 +18,7 @@ class MegaErrorCodes(IntEnum):
     ERATELIMIT = -4
     EFAILED = -5
     ETOOMANY = -6
+    EUPLOADERBANNED = -6
     ERANGE = -7
     EEXPIRED = -8
     ENOENT = -9
@@ -52,7 +53,10 @@ MEGA_ERROR_DESCRIPTION: dict[MegaErrorCodes, tuple[str, str]] = {
                                 ('You have exceeded your command weight per time quota. Please wait a few seconds, then try again '
                                  '(this should never happen in sane real-life applications)')),
     MegaErrorCodes.EFAILED: ('EFAILED', 'The upload failed. Please restart it from scratch'),
-    MegaErrorCodes.ETOOMANY: ('ETOOMANY', 'Too many concurrent IP addresses are accessing this upload target URL'),
+    # MegaErrorCodes.ETOOMANY: ('ETOOMANY', 'Too many concurrent IP addresses are accessing this upload target URL'),
+    MegaErrorCodes.EUPLOADERBANNED: ('EUPLOADERBANNED',
+                                     ('This link is unavailable as the user\'s account has been closed for gross '
+                                      'violation of MEGA\'s Terms of Service')),
     MegaErrorCodes.ERANGE: ('ERANGE', 'The upload file packet is out of range or not starting and ending on a chunk boundary'),
     MegaErrorCodes.EEXPIRED: ('EEXPIRED', 'The upload target URL you are trying to access has expired. Please request a fresh one'),
     MegaErrorCodes.ENOENT: ('ENOENT', 'Object (typically, node or user) not found'),

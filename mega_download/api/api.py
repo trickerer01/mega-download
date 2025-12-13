@@ -226,6 +226,9 @@ class Mega:
                     raise RequestError(f'Unknown response: {jresp!r}')
             except Exception as e:
                 Log.error(f'query_api: {sys.exc_info()[0]}: {sys.exc_info()[1]}')
+                if isinstance(e, RequestError):
+                    if e.code not in (MegaErrorCodes.EINTERNAL, MegaErrorCodes.EAGAIN, MegaErrorCodes.ERATELIMIT, MegaErrorCodes.EKEY):
+                        break
                 if (r is None or r.status != 403) and not isinstance(e, (ClientPayloadError, ClientResponseError, ClientConnectorError)):
                     try_num += 1
                     Log.error(f'query_api: error #{try_num:d}...')

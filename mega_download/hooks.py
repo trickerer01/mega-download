@@ -22,7 +22,7 @@ from .util import datetime_str_nfull, sanitize_filename
 __all__ = ('create_callbacks',)
 
 
-class PathJSONEncode(json.JSONEncoder):
+class PathJSONEncoder(json.JSONEncoder):
     def default(self, o: pathlib.Path) -> str:
         return o.as_posix()
 
@@ -56,7 +56,7 @@ class DumpLinksCallback(DownloadParamsCallback):
         Log.info(f'[{self.__class__.__name__}] Saving to {self._filepath}')
         self._filepath.parent.mkdir(parents=True, exist_ok=True)
         with open(self._filepath, 'wt', encoding=UTF8) as outfile:
-            json.dump(self._json, outfile, ensure_ascii=False, indent=4, cls=PathJSONEncode)
+            json.dump(self._json, outfile, ensure_ascii=False, indent=4, cls=PathJSONEncoder)
             outfile.write('\n')
 
     def execute(self, url: str, download_params: DownloadParams) -> None:
@@ -89,7 +89,7 @@ class DumpFileSystemCallback(FileSystemCallback):
         Log.info(f'[{self.__class__.__name__}] Saving to {self._filepath}')
         self._filepath.parent.mkdir(parents=True, exist_ok=True)
         with open(self._filepath, 'wt', encoding=UTF8) as outfile:
-            json.dump(self._json, outfile, ensure_ascii=False, indent=4, cls=PathJSONEncode)
+            json.dump(self._json, outfile, ensure_ascii=False, indent=4, cls=PathJSONEncoder)
             outfile.write('\n')
 
     def execute(self, root_id: str, ftree: FileSystemDump) -> None:
