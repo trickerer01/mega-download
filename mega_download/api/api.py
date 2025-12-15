@@ -677,7 +677,7 @@ class Mega:
             for child_item in parent_mapping.get(parent_item_id, []):
                 item_name: str = child_item['attributes'].get('n')
                 if item_name:
-                    item_path = parent_item_path / item_name
+                    item_path = parent_item_path / item_name.strip()
                     path_mapping[item_path] = child_item
                     if child_item['t'] == NodeType.FOLDER:
                         await build_path_tree(child_item['h'], item_path)
@@ -694,7 +694,7 @@ class Mega:
         for root_id in root_ids:
             root_node = node_map[root_id]
             root_name = root_node['attributes']['n']
-            root_path = pathlib.PurePosixPath(root_name if root_name != 'Cloud Drive' else '.')
+            root_path = pathlib.PurePosixPath(root_name.strip() if root_name != 'Cloud Drive' else '.')
             path_mapping[root_path] = root_node
             await build_path_tree(root_id, root_path)
 
