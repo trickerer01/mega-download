@@ -15,7 +15,7 @@ import re
 import sys
 import warnings
 from asyncio import Semaphore, create_task, gather, sleep
-from collections.abc import Sequence
+from collections.abc import Generator, Sequence
 from inspect import get_annotations
 from typing import Literal, TypeAlias
 
@@ -528,8 +528,8 @@ class Mega:
             if not (touch and existing_size == 0):
                 size_match_msg = f'({"COMPLETE" if existing_size == expected_size else "MISMATCH!"})'
                 exists_msg = f'{output_path} already exists, size: {existing_size / Mem.MB:.2f} MB {size_match_msg}'
+                Log.info(exists_msg)
                 if self._noconfirm and existing_size == expected_size:
-                    Log.info(exists_msg)
                     return output_path
                 ans = 'q'
                 while ans not in 'yYnN01':
@@ -544,32 +544,61 @@ class Mega:
         size_msg = '0.00 / ' if touch else ''
         Log.info(f'Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{expected_size / Mem.MB:.2f} MB)...')
 
-        chunk_generator = make_chunk_generator(expected_size)
-        chunk_decryptor = make_chunk_decryptor(iv, k_decrypted, meta_mac)
-        _ = next(chunk_decryptor)  # Init chunk decryptor
-
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        bytes_written = 0
-        async with async_open(output_path, 'wb') as output_file:
-            if not touch:
+
+        if touch:
+            output_path.touch(exist_ok=True)
+            return output_path
+
+        chunk_decryptor: Generator[bytes, bytes | None, None] | None = None
+        try_num = 0
+        while try_num <= self._retries:
+            r: ClientResponse | None = None
+            try:
                 async with await self._wrap_request('GET', direct_file_url) as r:
-                    for i, chunk in enumerate(chunk_generator):
-                        raw_chunk: bytes = await r.content.readexactly(chunk.size)
-                        decrypted_chunk: bytes = chunk_decryptor.send(raw_chunk)
-                        actual_size = len(decrypted_chunk)
-                        bytes_written += actual_size
-                        dwn_progress_str = f'+{actual_size:d} ({bytes_written / Mem.MB:.2f} / {expected_size / Mem.MB:.2f} MB)'
-                        Log.info(f'[{num:d} / {self._queue_size:d}] {output_path.name} chunk {i + 1:d}: {dwn_progress_str}...')
-                        await output_file.write(decrypted_chunk)
-        try:
-            if touch:
-                # No guarantee of generator being fully consumed
-                chunk_decryptor.close()
-            else:
-                # Finalize decryptor (trigger integrity check)
-                chunk_decryptor.send(None)
-        except StopIteration:
-            pass
+                    r.raise_for_status()
+                    bytes_written = 0
+                    chunk_generator = make_chunk_generator(expected_size)
+                    chunk_decryptor = make_chunk_decryptor(iv, k_decrypted, meta_mac)
+                    _ = next(chunk_decryptor)  # Init chunk decryptor
+                    async with async_open(output_path, 'wb') as output_file:
+                        for i, chunk in enumerate(chunk_generator):
+                            if i and try_num:
+                                try_num = 0
+                            raw_chunk: bytes = await r.content.readexactly(chunk.size)
+                            decrypted_chunk: bytes = chunk_decryptor.send(raw_chunk)
+                            actual_size = len(decrypted_chunk)
+                            bytes_written += actual_size
+                            dwn_progress_str = f'+{actual_size:d} ({bytes_written / Mem.MB:.2f} / {expected_size / Mem.MB:.2f} MB)'
+                            Log.info(f'[{num:d} / {self._queue_size:d}] {output_path.name} chunk {i + 1:d}: {dwn_progress_str}...')
+                            await output_file.write(decrypted_chunk)
+                break
+            except Exception as e:
+                Log.error(f'{output_path.name}: {sys.exc_info()[0]}: {sys.exc_info()[1]}')
+                if (r is None or r.status not in (509, 403)) and not isinstance(e, (
+                     ClientPayloadError, ClientResponseError, ClientConnectorError)):
+                    try_num += 1
+                    Log.error(f'{output_path.name}: error #{try_num:d}...')
+                if r is not None and not r.closed:
+                    r.close()
+                if isinstance(e, ClientResponseError) and e.status == 509:
+                    time_left = r.headers.get('X-MEGA-Time-Left', '555') if r is not None else '555'
+                    sleep_time = min(120. + int(time_left), 3600.)
+                    Log.warn(f'MEGA transfer quota exceeded (returned {time_left})! Waiting {sleep_time:.2f} seconds...')
+                    await sleep(sleep_time)
+                if try_num <= self._retries:
+                    await sleep(random.uniform(*CONNECT_RETRY_DELAY))
+
+        if chunk_decryptor is not None:
+            try:
+                if touch:
+                    # No guarantee of generator being fully consumed
+                    chunk_decryptor.close()
+                else:
+                    # Finalize decryptor (trigger integrity check)
+                    chunk_decryptor.send(None)
+            except StopIteration:
+                pass
 
         if output_path.is_file():
             total_size = output_path.stat().st_size
