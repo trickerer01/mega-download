@@ -523,17 +523,17 @@ class Mega:
 
         touch = self._download_mode == DownloadMode.TOUCH
 
-        if output_path.exists():
+        if output_path.is_file():
             existing_size = output_path.stat().st_size
             if not (touch and existing_size == 0):
                 size_match_msg = f'({"COMPLETE" if existing_size == expected_size else "MISMATCH!"})'
                 exists_msg = f'{output_path} already exists, size: {existing_size / Mem.MB:.2f} MB {size_match_msg}'
-                if self._noconfirm:
+                if self._noconfirm and existing_size == expected_size:
                     Log.info(exists_msg)
                     return output_path
                 ans = 'q'
                 while ans not in 'yYnN01':
-                    ans = input(f'{exists_msg}. Overwrite? [y/N]\n')
+                    ans = 'y' if self._noconfirm else input(f'{exists_msg}. Overwrite? [y/N]\n')
                     if ans in 'nN0':
                         Log.warn(f'{output_path.name} was skipped')
                         return output_path
@@ -571,7 +571,7 @@ class Mega:
         except StopIteration:
             pass
 
-        if output_path.exists():
+        if output_path.is_file():
             total_size = output_path.stat().st_size
             Log.info(f'{output_path.name} {"" if total_size == expected_size else "NOT "}completed ({total_size / Mem.MB:.2f} MB)')
             return output_path
