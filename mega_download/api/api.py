@@ -147,8 +147,8 @@ class Mega:
         self._aborted = True
 
     def _make_session(self) -> ClientSession:
-        if self._session is not None:
-            raise ValidationError('make_session should only be called once!')
+        if self._session is not None and not self._session.closed:
+            raise ValidationError('Called `make_session` with current session active!')
         use_proxy = bool(self._proxy)
         if use_proxy:
             connector = ProxyConnector.from_url(self._proxy, limit=self._max_jobs)
@@ -168,7 +168,8 @@ class Mega:
 
     async def _wrap_request(self, method: Literal['POST', 'GET'], url: str, **kwargs) -> ClientResponse:
         """Queues request, updating headers/proxies beforehand, and returns the response"""
-        assert self._session is not None
+        if self._session is None or self._session.closed:
+            self._session = self._make_session()
         if self._nodelay is False:
             await RequestQueue.until_ready(url)
         if 'timeout' not in kwargs:
@@ -176,9 +177,6 @@ class Mega:
         return await self._session.request(method, url, **kwargs)
 
     async def query_api(self, data_input: dict[str, str], *, add_params: dict[str, str] | None = None) -> APIResponse:
-        if self._session is None:
-            self._session = self._make_session()
-
         def handle_int_resp(int_resp: int) -> int:
             if int_resp == 0:
                 return int_resp
