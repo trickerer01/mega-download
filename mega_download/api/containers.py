@@ -109,6 +109,7 @@ class ParsedUrl(NamedTuple):
 
 class DownloadParams(TypedDict):
     index: int
+    original_pos: int
     direct_file_url: str
     output_path: pathlib.Path
     file_size: int

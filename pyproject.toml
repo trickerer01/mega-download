@@ -4,7 +4,7 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 name = 'mega-download'
-version = '0.4.55'
+version = '0.4.56'
 authors = [
     {name = 'trickerer01'},
 ]

@@ -92,6 +92,7 @@ class Mega:
         self._master_key: IntVector = ()
         self._shared_keys: SharedkeysDict = {}
         self._queue_size: int = 0
+        self._queue_size_orig: int = 0
         self._parsed: ParsedUrl = ParsedUrl.default()
         # options
         self._dest_base: pathlib.Path = options['dest_base']
@@ -126,11 +127,11 @@ class Mega:
 
     @staticmethod
     def _make_download_params(
-        index: int, direct_file_url: str, output_path: pathlib.Path,
+        index: int, original_pos: int, direct_file_url: str, output_path: pathlib.Path,
         file_size: int, iv: IntVector, meta_mac: IntVector, k_decrypted: IntVector,
     ) -> DownloadParams:
         return DownloadParams(
-            index=index, direct_file_url=direct_file_url, output_path=output_path,
+            index=index, original_pos=original_pos, direct_file_url=direct_file_url, output_path=output_path,
             file_size=file_size, iv=iv, meta_mac=meta_mac, k_decrypted=k_decrypted,
         )
 
@@ -367,6 +368,7 @@ class Mega:
                 file_datas: list[DownloadParams] = fdata_or_str
                 download_param_list.extend(DownloadParams(
                     index=file_data['index'],
+                    original_pos=file_data['index'] + 1,
                     direct_file_url=file_data['direct_file_url'],
                     output_path=self._dest_base / file_data['output_path'],
                     file_size=file_data['file_size'],
@@ -429,11 +431,12 @@ class Mega:
         file_url = file_data['g']
         file_size = file_data['s']
         output_path = self._dest_base / file_path
+        orig_pos = file['num_in_queue']
         file_url_https = ensure_scheme_https(file_url)
         iv = file['iv']
         meta_mac = file['meta_mac']
         k_decrypted = file['k_decrypted']
-        download_params = self._make_download_params(index, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
+        download_params = self._make_download_params(index, orig_pos, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
         self._before_download(download_params)
         return await self._download(download_params)
 
@@ -452,6 +455,7 @@ class Mega:
 
         self._after_scan(root_id, ftree)
 
+        self._queue_size_orig = len(files)
         proc_queue: set[pathlib.PurePosixPath] = self._filter_folder_files(files)
         self._queue_size = len(proc_queue)
         Log.info(f'Saving {self._queue_size:d} / {len(files):d} files...')
@@ -506,7 +510,7 @@ class Mega:
             Log.info(f'File {file_name} was filtered out by {ffilter!s}. Skipped!')
             return output_path
 
-        download_params = self._make_download_params(0, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
+        download_params = self._make_download_params(0, 1, file_url_https, output_path, file_size, iv, meta_mac, k_decrypted)
         self._before_download(download_params)
         return await self._download(download_params)
 
@@ -516,6 +520,7 @@ class Mega:
         if self._aborted:
             return params['output_path']
         num = params['index'] + 1
+        num_orig = params['original_pos']
         direct_file_url = params['direct_file_url']
         output_path = params['output_path']
         expected_size = params['file_size']
@@ -544,7 +549,8 @@ class Mega:
 
         touch_msg = ' <touch>' if touch else ''
         size_msg = '0.00 / ' if touch else ''
-        Log.info(f'Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{expected_size / Mem.MB:.2f} MB)...')
+        Log.info(f'[{num:d} / {self._queue_size:d}] ([{num_orig:d} / {self._queue_size_orig}])'
+                 f' Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{expected_size / Mem.MB:.2f} MB)...')
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
