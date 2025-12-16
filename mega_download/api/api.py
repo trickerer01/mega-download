@@ -447,6 +447,9 @@ class Mega:
         files: FilePathMapping = {p: f for p, f in ftree.items() if f['t'] == NodeType.FILE}
         Log.info(f'{fof_nodes[root_id]["attributes"]["n"]}: found {len(files):d} files...')
 
+        for fidx, fpath in enumerate(files):
+            files[fpath]['num_in_queue'] = fidx + 1
+
         self._after_scan(root_id, ftree)
 
         proc_queue: set[pathlib.PurePosixPath] = self._filter_folder_files(files)
@@ -483,6 +486,7 @@ class Mega:
         file_size = file['s']
         attributes = decrypt_attr(base64_url_decode(file['at']), k_decrypted)
         file['attributes'] = attributes
+        file['num_in_queue'] = 1
         file_name: str = attributes['n']
         ftree: FileSystemMapping = {pathlib.PurePosixPath(file_name): file}
 
@@ -573,7 +577,7 @@ class Mega:
                 break
             except Exception as e:
                 Log.error(f'{output_path.name}: {sys.exc_info()[0]}: {sys.exc_info()[1]}')
-                if (r is None or r.status not in (509, 403)) and not isinstance(e, (
+                if (r is None or r.status not in (509,)) and not isinstance(e, (
                      ClientPayloadError, ClientResponseError, ClientConnectorError)):
                     try_num += 1
                     Log.error(f'{output_path.name}: error #{try_num:d}...')

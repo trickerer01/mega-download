@@ -68,6 +68,8 @@ class File(Node):
     meta_mac: IntVector
     sk_decrypted: IntVector
 
+    num_in_queue: int
+
 
 class Folder(Node):
     su: str  # Shared user Id, only present present in shared files / folder

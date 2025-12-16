@@ -12,6 +12,21 @@ from .api import File, Mem, NumRange
 from .util import build_regex_from_pattern
 
 
+class FileNumFilter:
+    """
+    Filters files by file number within total ordering
+    """
+    def __init__(self, nrange: NumRange) -> None:
+        self._range = nrange
+
+    def filters_out(self, file: File) -> bool:
+        file_num = file['num_in_queue']
+        return not self._range.min <= file_num <= self._range.max
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}<{self._range!s}>'
+
+
 class FileSizeFilter:
     """
     Filters files by file size in Megabytes (min .. max)

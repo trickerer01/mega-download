@@ -29,7 +29,7 @@ from .defs import (
     SCAN_CANCEL_KEYSTROKE,
     LoggingFlags,
 )
-from .filters import FileExtFilter, FileNameFilter, FileSizeFilter
+from .filters import FileExtFilter, FileNameFilter, FileNumFilter, FileSizeFilter
 from .hooks import create_callbacks
 from .input import wait_for_key
 from .logger import Log
@@ -64,6 +64,7 @@ def make_mega_options(
         extra_headers=Config.extra_headers,
         extra_cookies=Config.extra_cookies,
         filters=(
+            *((FileNumFilter(Config.filter_filenum),) if Config.filter_filenum else ()),
             *((FileSizeFilter(Config.filter_filesize),) if Config.filter_filesize else ()),
             *((FileNameFilter(Config.filter_filename),) if Config.filter_filename else ()),
             *((FileExtFilter(Config.filter_extensions),) if Config.filter_extensions else ()),

@@ -121,6 +121,7 @@ def add_common_args(par: ArgumentParser) -> None:
     par.add_argument('-g', '--disable-log-colors', action=ACTION_STORE_TRUE, help=HELP_ARG_NOCOLORS)
     par.add_argument('-h', '--header', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_HEADER, type=valid_kwarg)
     par.add_argument('-c', '--cookie', metavar='#name=value', action=ACTION_APPEND, help=HELP_ARG_COOKIE, type=valid_kwarg)
+    par.add_argument('-fu', '--filter-filenum', metavar='#min-max', default=None, help='', type=valid_range)
     par.add_argument('-fs', '--filter-filesize', metavar='#min-max', default=None, help='', type=valid_range)
     par.add_argument('-fn', '--filter-filename', metavar='#pattern', default=None, help='', type=valid_pattern)
     par.add_argument('-fe', '--filter-extensions', metavar='#.EXT', action=ACTION_APPEND, help=HELP_ARG_FILTERS, type=valid_ext)

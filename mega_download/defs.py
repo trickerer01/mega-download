@@ -71,7 +71,7 @@ HELP_ARG_MAXJOBS = f'Maximum simultaneous connections, 1..{MAX_JOBS_MAX:d}'
 HELP_ARG_RETRIES = f'Connection retries count. Default is \'{CONNECT_RETRIES_BASE:d}\''
 # New
 HELP_ARG_FILE = 'Full path to saved links file'
-HELP_ARG_FILTERS = 'Available filters: file size (MB), file name (pattern)'
+HELP_ARG_FILTERS = 'Available filters: file number is queue (order is always the same), file size (MB), file name (pattern)'
 HELP_ARG_DUMP_LINKS = 'Store all gathered links and other misc info for future processing'
 HELP_ARG_DUMP_STRUCTURE = 'Store target url filesystem structure'
 

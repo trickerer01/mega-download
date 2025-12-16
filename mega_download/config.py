@@ -28,6 +28,7 @@ class BaseConfig:
 
     def __init__(self) -> None:
         # new
+        self.filter_filenum: NumRange | None = None
         self.filter_filesize: NumRange | None = None
         self.filter_filename: str | None = None
         self.filter_extensions: list[str] | None = None
@@ -73,6 +74,7 @@ class BaseConfigContainer(Protocol):
     extra_headers: list[tuple[str, str]] | None
     extra_cookies: list[tuple[str, str]] | None
     nodelay: bool
+    noconfirm: bool
 
 
 Config: BaseConfig = BaseConfig()
