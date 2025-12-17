@@ -511,6 +511,7 @@ class Mega:
         if 'g' not in file:
             raise RequestError('File not accessible anymore')
 
+        self._queue_size_orig = 1
         self._queue_size = 1
         output_path = self._dest_base / file_name
         file_url_https = ensure_scheme_https(file_url)
@@ -653,9 +654,8 @@ class Mega:
                     ans = input(f'[{file_idx:d}] Download {qpath.name} ({file_size / Mem.MB:.2f} MB)? [Y/n]\n')
                 do_append = ans in 'yY1'
             if do_append:
-                if ftree[qpath]['t'] == NodeType.FILE:
-                    enqueued_idx += 1
-                    Log.info(f'[{enqueued_idx:d}] {qpath.name} enqueued...')
+                enqueued_idx += 1
+                Log.info(f'[{enqueued_idx:d}] {qpath.name} enqueued...')
                 proc_queue.add(qpath)
         return proc_queue
 
@@ -665,7 +665,8 @@ class Mega:
         file_lookup1, file_lookup2 = '/file/', '!'
         has_folder1, has_folder2 = folder_lookup1 in url, folder_lookup2 in url
         has_file1, has_file2 = file_lookup1 in url, file_lookup2 in url
-        root_folder_id = file_id = shared_key = ''
+        root_folder_id = ''
+        file_id = ''
         if has_folder1 or has_folder2:
             if has_folder1:
                 # ex: {SITE}/folder/6cE1AazL#9ISiN871PS8mBAKIkiSLdw
@@ -701,6 +702,8 @@ class Mega:
                 shared_key = url[fmatch_v1.end():]
             else:
                 raise ValueError(f'Not a valid file URL {url}')
+        else:
+            raise ValueError(f'Not a valid MEGA URL \'{url}\'!')
         return ParsedUrl(folder_id=root_folder_id, file_id=file_id, key_b64=shared_key)
 
     @staticmethod
