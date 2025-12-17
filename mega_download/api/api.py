@@ -8,6 +8,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 
 from __future__ import annotations
 
+import datetime
 import json
 import pathlib
 import random
@@ -303,8 +304,10 @@ class Mega:
             file_or_folder['k_decrypted'] = k
             file_or_folder['iv'] = iv
             file_or_folder['meta_mac'] = meta_mac
+            file_or_folder['timestamp'] = datetime.datetime.fromtimestamp(file_or_folder['ts'])
             nodes.append(file_or_folder)
-        return nodes
+        nodes_sorted = sorted(nodes, key=lambda f: f['ts'])
+        return nodes_sorted
 
     def _process_folder_node(self, file_or_folder: File | Folder) -> File | Folder:
         Log.trace(f'Node {file_or_folder["p"]}/{file_or_folder["h"]}...')

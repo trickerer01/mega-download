@@ -8,6 +8,7 @@ Author: trickerer (https://github.com/trickerer, https://github.com/trickerer01)
 
 from __future__ import annotations
 
+import datetime
 import pathlib
 from enum import IntEnum
 from typing import NamedTuple, TypeAlias, TypedDict
@@ -52,6 +53,8 @@ class Node(TypedDict):
     attributes: Attributes  # Decrypted attributes
     k_decrypted: IntVector
     key_decrypted: IntVector  # Decrypted access key (for folders, its values if the same as 'k_decrypted')
+
+    timestamp: datetime.datetime
 
 
 class File(Node):
