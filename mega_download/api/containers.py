@@ -110,7 +110,7 @@ class ParsedUrl(NamedTuple):
         return ParsedUrl('', '', '')
 
 
-class DownloadParams(TypedDict):
+class DownloadParams(NamedTuple):
     index: int
     original_pos: int
     direct_file_url: str

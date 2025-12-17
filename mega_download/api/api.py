@@ -132,8 +132,14 @@ class Mega:
         file_size: int, iv: IntVector, meta_mac: IntVector, k_decrypted: IntVector,
     ) -> DownloadParams:
         return DownloadParams(
-            index=index, original_pos=original_pos, direct_file_url=direct_file_url, output_path=output_path,
-            file_size=file_size, iv=iv, meta_mac=meta_mac, k_decrypted=k_decrypted,
+            index,
+            original_pos,
+            direct_file_url,
+            output_path,
+            file_size,
+            iv,
+            meta_mac,
+            k_decrypted,
         )
 
     def _before_download(self, download_params: DownloadParams) -> None:
@@ -369,15 +375,15 @@ class Mega:
         for _, fdata_or_str in json_.items():
             if isinstance(fdata_or_str, list) and fdata_or_str[0].keys() == get_annotations(DownloadParams).keys():
                 file_datas: list[DownloadParams] = fdata_or_str
-                download_param_list.extend(DownloadParams(
-                    index=file_data['index'],
-                    original_pos=file_data['index'] + 1,
-                    direct_file_url=file_data['direct_file_url'],
-                    output_path=self._dest_base / file_data['output_path'],
-                    file_size=file_data['file_size'],
-                    iv=IntVector(file_data['iv']),
-                    meta_mac=IntVector(file_data['meta_mac']),
-                    k_decrypted=IntVector(file_data['k_decrypted']),
+                download_param_list.extend(self._make_download_params(
+                    file_data.index,
+                    file_data.index + 1,
+                    file_data.direct_file_url,
+                    self._dest_base / file_data.output_path,
+                    file_data.file_size,
+                    file_data.iv,
+                    file_data.meta_mac,
+                    file_data.k_decrypted,
                 ) for file_data in file_datas)
         return download_param_list
 
@@ -519,17 +525,17 @@ class Mega:
 
     async def _download(self, params: DownloadParams) -> pathlib.Path:
         if self._download_mode == DownloadMode.SKIP:
-            return params['output_path']
+            return params.output_path
         if self._aborted:
-            return params['output_path']
-        num = params['index'] + 1
-        num_orig = params['original_pos']
-        direct_file_url = params['direct_file_url']
-        output_path = params['output_path']
-        expected_size = params['file_size']
-        iv = params['iv']
-        meta_mac = params['meta_mac']
-        k_decrypted = params['k_decrypted']
+            return params.output_path
+        num = params.index + 1
+        num_orig = params.original_pos
+        direct_file_url = params.direct_file_url
+        output_path = params.output_path
+        expected_size = params.file_size
+        iv = params.iv
+        meta_mac = params.meta_mac
+        k_decrypted = params.k_decrypted
 
         touch = self._download_mode == DownloadMode.TOUCH
 
@@ -587,7 +593,7 @@ class Mega:
             except Exception as e:
                 Log.error(f'{output_path.name}: {sys.exc_info()[0]}: {sys.exc_info()[1]}')
                 if (r is None or r.status not in (509,)) and not isinstance(e, (
-                     ClientPayloadError, ClientResponseError, ClientConnectorError)):
+                   ClientPayloadError, ClientResponseError, ClientConnectorError)):
                     try_num += 1
                     Log.error(f'{output_path.name}: error #{try_num:d}...')
                 if r is not None and not r.closed:

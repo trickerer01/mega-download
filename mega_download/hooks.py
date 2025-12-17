@@ -63,13 +63,14 @@ class DumpLinksCallback(DownloadParamsCallback):
         if url not in self._json:
             self._json[url] = []
         self._json[url].append(DownloadParams(
-            index=download_params['index'],
-            direct_file_url=download_params['direct_file_url'],
-            output_path=download_params['output_path'].relative_to(Config.dest_base),
-            file_size=download_params['file_size'],
-            iv=download_params['iv'],
-            meta_mac=download_params['meta_mac'],
-            k_decrypted=download_params['k_decrypted'],
+            download_params.index,
+            download_params.original_pos,
+            download_params.direct_file_url,
+            download_params.output_path.relative_to(Config.dest_base),
+            download_params.file_size,
+            download_params.iv,
+            download_params.meta_mac,
+            download_params.k_decrypted,
         ))
 
     def __str__(self) -> str:
