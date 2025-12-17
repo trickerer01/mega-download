@@ -1,8 +1,5 @@
 # Dev
 *venv/
-mega_download/__pycache__/
-mega_download/api/__pycache__/
-mega_download/util/__pycache__/
 *.cfg
 *.lnk
 *.exe
