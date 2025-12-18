@@ -587,7 +587,7 @@ class Mega:
                             decrypted_chunk: bytes = chunk_decryptor.send(raw_chunk)
                             actual_size = len(decrypted_chunk)
                             bytes_written += actual_size
-                            if i % 10 == 0:
+                            if i % 10 == 0 or bytes_written + 1 * Mem.MB >= expected_size:
                                 dwn_progress_str = f'+{actual_size:d} ({bytes_written / Mem.MB:.2f} / {expected_size / Mem.MB:.2f} MB)'
                                 Log.info(f'[{num:d} / {self._queue_size:d}] {output_path.name} chunk {i + 1:d}: {dwn_progress_str}...')
                             await output_file.write(decrypted_chunk)
