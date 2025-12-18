@@ -73,6 +73,8 @@ from .request_queue import RequestQueue
 
 __all__ = ('Mega',)
 
+CLIENT_CONNECTOR_ERRORS = (ClientPayloadError, ClientConnectorError)
+
 APIResponse: TypeAlias = File | Folder | UserInfo | str | int
 
 re_mega_file_id_v1 = re.compile(r'\W(\w{8})\W')
@@ -235,7 +237,7 @@ class Mega:
                 if isinstance(e, RequestError):
                     if e.code not in (MegaErrorCodes.EINTERNAL, MegaErrorCodes.EAGAIN, MegaErrorCodes.ERATELIMIT, MegaErrorCodes.EKEY):
                         break
-                if (r is None or r.status != 403) and not isinstance(e, (ClientPayloadError, ClientResponseError, ClientConnectorError)):
+                if (r is None or r.status != 403) and not isinstance(e, CLIENT_CONNECTOR_ERRORS):
                     try_num += 1
                     Log.error(f'query_api: error #{try_num:d}...')
                 if r is not None and not r.closed:
@@ -593,8 +595,7 @@ class Mega:
                 break
             except Exception as e:
                 Log.error(f'{output_path.name}: {sys.exc_info()[0]}: {sys.exc_info()[1]}')
-                if (r is None or r.status not in (509,)) and not isinstance(e, (
-                   ClientPayloadError, ClientResponseError, ClientConnectorError)):
+                if (r is None or r.status not in (509,)) and not isinstance(e, CLIENT_CONNECTOR_ERRORS):
                     try_num += 1
                     Log.error(f'{output_path.name}: error #{try_num:d}...')
                 if r is not None and not r.closed:
