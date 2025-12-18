@@ -312,8 +312,7 @@ class Mega:
             file_or_folder['meta_mac'] = meta_mac
             file_or_folder['timestamp'] = datetime.datetime.fromtimestamp(file_or_folder['ts'])
             nodes.append(file_or_folder)
-        nodes_sorted = sorted(nodes, key=lambda f: f['ts'])
-        return nodes_sorted
+        return nodes
 
     def _process_folder_node(self, file_or_folder: File | Folder) -> File | Folder:
         Log.trace(f'Node {file_or_folder["p"]}/{file_or_folder["h"]}...')
@@ -456,7 +455,7 @@ class Mega:
 
         root_id: str = next(iter(fof_nodes))
         ftree: FileSystemMapping = await self._build_file_system(fof_nodes, [root_id])
-        files: FilePathMapping = {p: f for p, f in ftree.items() if f['t'] == NodeType.FILE}
+        files: FilePathMapping = {p: ftree[p] for p in sorted(ftree, key=lambda p: ftree[p]['ts']) if ftree[p]['t'] == NodeType.FILE}
         Log.info(f'{fof_nodes[root_id]["attributes"]["n"]}: found {len(files):d} files...')
 
         for fidx, fpath in enumerate(files):
