@@ -50,7 +50,7 @@ from .containers import (
     SharedkeysDict,
     UserInfo,
 )
-from .defs import CONNECT_RETRY_DELAY, SITE_API, UINT32_MAX, UTF8, DownloadMode, Mem
+from .defs import CONNECT_RETRY_DELAY, SITE_API, SITE_PRIMARY, UINT32_MAX, UTF8, DownloadMode, Mem
 from .encryption import (
     base64_to_ints,
     base64_url_decode,
@@ -560,7 +560,7 @@ class Mega:
 
         touch_msg = ' <touch>' if touch else ''
         size_msg = '0.00 / ' if touch else ''
-        Log.info(f'[{num:d} / {self._queue_size:d}] ([{num_orig:d} / {self._queue_size_orig}])'
+        Log.info(f'[{SITE_PRIMARY}] [{num:d} / {self._queue_size:d}] ([{num_orig:d} / {self._queue_size_orig}])'
                  f' Saving{touch_msg} {output_path.name} => {output_path} ({size_msg}{expected_size / Mem.MB:.2f} MB)...')
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -590,7 +590,8 @@ class Mega:
                             bytes_written += actual_size
                             if i % 10 == 0 or bytes_written + 1 * Mem.MB >= expected_size:
                                 dwn_progress_str = f'+{actual_size:d} ({bytes_written / Mem.MB:.2f} / {expected_size / Mem.MB:.2f} MB)'
-                                Log.info(f'[{num:d} / {self._queue_size:d}] {output_path.name} chunk {i + 1:d}: {dwn_progress_str}...')
+                                Log.info(f'[{SITE_PRIMARY}] [{num:d} / {self._queue_size:d}] {output_path.name}'
+                                         f' chunk {i + 1:d}: {dwn_progress_str}...')
                             await output_file.write(decrypted_chunk)
                 break
             except Exception as e:
