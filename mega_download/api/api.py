@@ -572,6 +572,9 @@ class Mega:
         chunk_decryptor: Generator[bytes, bytes | None, None] | None = None
         try_num = 0
         while try_num <= self._retries:
+            if output_path.is_file() and output_path.stat().st_size == expected_size:
+                Log.info(f'{output_path} is already completed, size: {expected_size / Mem.MB:.2f}')
+                break
             r: ClientResponse | None = None
             try:
                 async with await self._wrap_request('GET', direct_file_url) as r:
