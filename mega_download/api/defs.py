@@ -22,6 +22,7 @@ UTF8 = 'utf-8'
 LATIN1 = 'latin-1'
 HTTPS_PREFIX = 'https://'
 
+SITE_TAG = 'MEGA'
 SITE_PRIMARY = f'{HTTPS_PREFIX}mega.nz'
 SITE_API = f'{HTTPS_PREFIX}g.api.mega.co.nz/cs'
 
