@@ -456,8 +456,9 @@ class Mega:
         Log.trace(f'Folder {self._parsed.folder_id} nodes: {fof_nodes!s}')
 
         root_id: str = next(iter(fof_nodes))
-        ftree: FileSystemMapping = await self._build_file_system(fof_nodes, [root_id])
-        files: FilePathMapping = {p: ftree[p] for p in sorted(ftree, key=lambda p: ftree[p]['ts']) if ftree[p]['t'] == NodeType.FILE}
+        ftree_u: FileSystemMapping = await self._build_file_system(fof_nodes, [root_id])
+        ftree: FileSystemMapping = {p: ftree_u[p] for p in sorted(ftree_u, key=lambda p: ftree_u[p]['ts'])}
+        files: FilePathMapping = {p: f for p, f in ftree.items() if f['t'] == NodeType.FILE}
         Log.info(f'{fof_nodes[root_id]["attributes"]["n"]}: found {len(files):d} files...')
 
         for fidx, fpath in enumerate(files):
