@@ -686,6 +686,7 @@ class Mega:
                     file_id = ffmatch.group(1)
                 root_folder_id, shared_key = tuple(parts.split('#', 1))
             elif has_folder2:
+                # ex. {SITE}/#F!DVcazA4B!ESuADWaiuaHp4GR0utWuuA
                 parts = url.split(folder_lookup2, 1)[1]
                 root_folder_id, shared_key = tuple(parts.split('!', 1))
             else:
