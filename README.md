@@ -3,7 +3,7 @@
 **mega-download** is a simple mega.nz shared folders and files downloader
 
 ### Requirements
-- **Python 3.10 or greater**
+- **Python 3.11 or greater**
 - See `requirements.txt` for additional dependencies. Install with:
   - `python -m pip install -r requirements.txt`
 ### Usage
